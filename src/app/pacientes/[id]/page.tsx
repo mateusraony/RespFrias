@@ -1,0 +1,285 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { PatientTabs } from '@/components/pacientes/patient-tabs'
+import { ClinicalFileForm } from '@/components/pacientes/clinical-file-form'
+import { SessionCard } from '@/components/pacientes/session-card'
+import { GoalActions } from '@/components/pacientes/goal-actions'
+import { GoalForm } from '@/components/pacientes/goal-form'
+import { getPatient } from '@/app/actions/patients'
+import { getClinicalFile, getAssessments } from '@/app/actions/assessments'
+import { getSessions } from '@/app/actions/sessions'
+import { getGoals } from '@/app/actions/goals'
+import { getAuditLogs } from '@/app/actions/audit'
+
+export default async function PacientePage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  const patient = await getPatient(id)
+  if (!patient) notFound()
+
+  const [clinicalFile, assessments, sessions, goals, auditLogs] = await Promise.all([
+    getClinicalFile(id),
+    getAssessments(id),
+    getSessions(id),
+    getGoals(id),
+    getAuditLogs(id),
+  ])
+
+  const activeGoals = goals.filter((g) => g.status === 'active')
+
+  const tabs = [
+    {
+      key: 'resumo',
+      label: 'Resumo',
+      content: (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Últimas sessões</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {sessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma sessão registrada.</p>
+              ) : (
+                sessions.slice(0, 3).map((s) => (
+                  <SessionCard key={s.id} session={s} patientId={id} />
+                ))
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Metas ativas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {activeGoals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma meta ativa.</p>
+              ) : (
+                activeGoals.map((g) => (
+                  <p key={g.id} className="text-sm">
+                    {g.description}
+                  </p>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ),
+    },
+    {
+      key: 'dados',
+      label: 'Dados Pessoais',
+      content: (
+        <Card>
+          <CardContent className="space-y-2 p-4">
+            <p>
+              <span className="font-medium">Email:</span> {patient.email || '—'}
+            </p>
+            <p>
+              <span className="font-medium">Telefone:</span> {patient.phone || '—'}
+            </p>
+            <p>
+              <span className="font-medium">Nascimento:</span>{' '}
+              {patient.birth_date
+                ? format(new Date(patient.birth_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
+                : '—'}
+            </p>
+            <p>
+              <span className="font-medium">Diagnóstico:</span> {patient.diagnosis || '—'}
+            </p>
+            <p>
+              <span className="font-medium">Observações:</span> {patient.notes || '—'}
+            </p>
+            <Button asChild className="mt-2">
+              <Link href={`/pacientes/${id}/editar`}>Editar dados</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      key: 'ficha',
+      label: 'Ficha Clínica',
+      content: <ClinicalFileForm patientId={id} clinicalFile={clinicalFile} />,
+    },
+    {
+      key: 'avaliacoes',
+      label: 'Avaliações',
+      content: (
+        <div className="space-y-3">
+          <Button asChild>
+            <Link href={`/pacientes/${id}/avaliacoes/nova`}>Nova avaliação</Link>
+          </Button>
+          {assessments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada.</p>
+          ) : (
+            assessments.map((a) => (
+              <Card key={a.id}>
+                <CardContent className="space-y-1 p-4 text-sm">
+                  <p className="font-medium">
+                    {format(new Date(a.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} ·{' '}
+                    {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
+                  </p>
+                  <p className="text-muted-foreground">
+                    SpO₂: {a.spo2 ?? '—'} · Borg: {a.borg ?? '—'} · FR: {a.respiratory_rate ?? '—'} ·
+                    FC: {a.heart_rate ?? '—'} · MRC: {a.mrc_scale ?? '—'} · TC6:{' '}
+                    {a.six_mwt_distance ?? '—'}m
+                  </p>
+                  {a.notes && <p>{a.notes}</p>}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'sessoes',
+      label: 'Sessões',
+      content: (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link href={`/pacientes/${id}/sessoes/nova?tipo=quick`}>Sessão rápida</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/pacientes/${id}/sessoes/nova?tipo=full`}>Sessão completa</Link>
+            </Button>
+          </div>
+          {sessions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma sessão registrada.</p>
+          ) : (
+            <div className="space-y-2">
+              {sessions.map((s) => (
+                <SessionCard key={s.id} session={s} patientId={id} />
+              ))}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'metas',
+      label: 'Metas',
+      content: (
+        <div className="space-y-3">
+          <GoalForm patientId={id} />
+          {goals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma meta registrada.</p>
+          ) : (
+            goals.map((g) => (
+              <Card key={g.id}>
+                <CardContent className="flex items-center justify-between gap-3 p-4">
+                  <div>
+                    <p className="text-sm">{g.description}</p>
+                    {g.target_date && (
+                      <p className="text-xs text-muted-foreground">
+                        Prazo: {format(new Date(g.target_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={
+                        g.status === 'achieved'
+                          ? 'success'
+                          : g.status === 'cancelled'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                    >
+                      {g.status === 'active'
+                        ? 'Ativa'
+                        : g.status === 'achieved'
+                          ? 'Atingida'
+                          : 'Cancelada'}
+                    </Badge>
+                    <GoalActions goalId={g.id} patientId={id} status={g.status} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'agenda',
+      label: 'Agenda',
+      content: <PlaceholderTab text="Agenda será implementada na Fase 2." />,
+    },
+    {
+      key: 'pagamentos',
+      label: 'Pagamentos',
+      content: <PlaceholderTab text="Pagamentos serão implementados na Fase 3." />,
+    },
+    {
+      key: 'relatorios',
+      label: 'Relatórios',
+      content: <PlaceholderTab text="Relatórios serão implementados na Fase 4." />,
+    },
+    {
+      key: 'anexos',
+      label: 'Anexos',
+      content: <PlaceholderTab text="Anexos serão implementados futuramente." />,
+    },
+    {
+      key: 'comunicacao',
+      label: 'Comunicação',
+      content: <PlaceholderTab text="Comunicação (Telegram) será implementada na Fase 5." />,
+    },
+    {
+      key: 'auditoria',
+      label: 'Auditoria',
+      content: (
+        <div className="space-y-2">
+          {auditLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum registro de auditoria.</p>
+          ) : (
+            auditLogs.map((log) => (
+              <Card key={log.id}>
+                <CardContent className="p-4 text-sm">
+                  <p className="font-medium">
+                    {log.entity_type} · {log.action} ·{' '}
+                    {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                  </p>
+                  {log.justification && (
+                    <p className="text-muted-foreground">Justificativa: {log.justification}</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">{patient.name}</h1>
+          {patient.is_fictitious && <Badge variant="warning">Paciente de teste</Badge>}
+        </div>
+      </div>
+      <PatientTabs tabs={tabs} />
+    </div>
+  )
+}
+
+function PlaceholderTab({ text }: { text: string }) {
+  return (
+    <Card>
+      <CardContent className="p-6 text-center text-sm text-muted-foreground">{text}</CardContent>
+    </Card>
+  )
+}

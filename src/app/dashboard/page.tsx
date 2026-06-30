@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -306,9 +307,9 @@ export default function DashboardPage() {
               </CardTitle>
               <p className="text-xs text-gray-500 mt-0.5">Pacientes que precisam de atenção agora</p>
             </div>
-            <a href="/pacientes?filtro=alerta" className="text-xs text-[#0d7ea8] hover:underline">
+            <Link href="/pacientes?filtro=alerta" className="text-xs text-[#0d7ea8] hover:underline">
               Ver todos
-            </a>
+            </Link>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
