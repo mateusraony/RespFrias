@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import { AppointmentForm } from '@/components/agenda/appointment-form'
 import { getAppointment } from '@/app/actions/appointments'

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/client'
 import type { ActionResult, Payment, PaymentWithPatient } from '@/types'
 
 const paymentSchema = z.object({
@@ -19,105 +19,84 @@ const paymentSchema = z.object({
 async function isMonthClosed(dueDate?: string): Promise<boolean> {
   if (!dueDate) return false
   const periodKey = dueDate.slice(0, 7)
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('financial_closes')
-    .select('closed_at, reopened_at')
-    .eq('period_key', periodKey)
-    .single()
-
-  return !!data && !data.reopened_at
+  const rows = await sql`
+    SELECT closed_at, reopened_at FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1
+  `
+  const row = rows[0]
+  return !!row && !row.reopened_at
 }
 
 export async function createPayment(formData: FormData): Promise<ActionResult<{ id: string }>> {
-  const raw = Object.fromEntries(formData)
-  const parsed = paymentSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
-  }
+  const parsed = paymentSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('payments')
-    .insert({ ...parsed.data, session_id: parsed.data.session_id || null })
-    .select('id')
-    .single()
-
-  if (error) return { success: false, error: 'Erro ao criar pagamento.' }
+  const { patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes } = parsed.data
+  const rows = await sql`
+    INSERT INTO payments (patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes)
+    VALUES (${patient_id}, ${session_id || null}, ${amount}, ${amount_paid ?? null},
+            ${status ?? 'pending'}, ${payment_method ?? null}, ${due_date ?? null}, ${notes ?? null})
+    RETURNING id
+  `
+  const row = rows[0]
+  if (!row) return { success: false, error: 'Erro ao criar pagamento.' }
 
   revalidatePath('/financeiro')
-  return { success: true, data: { id: data.id } }
+  return { success: true, data: { id: row.id as string } }
 }
 
 export async function updatePayment(id: string, formData: FormData): Promise<ActionResult<void>> {
-  const raw = Object.fromEntries(formData)
-  const parsed = paymentSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
+  const parsed = paymentSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  const current = (await sql`SELECT * FROM payments WHERE id = ${id} LIMIT 1`)[0]
+
+  if (await isMonthClosed(current?.due_date as string | undefined)) {
+    return { success: false, error: 'O mês deste pagamento já foi fechado. Reabra o fechamento mensal para editar.' }
   }
 
-  const supabase = await createAdminClient()
+  const { patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes } = parsed.data
+  const paidAt = status === 'paid' ? new Date().toISOString() : (current?.paid_at ?? null)
 
-  const { data: current } = await supabase.from('payments').select('*').eq('id', id).single()
+  await sql`
+    UPDATE payments
+    SET patient_id = ${patient_id}, session_id = ${session_id || null}, amount = ${amount},
+        amount_paid = ${amount_paid ?? null}, status = ${status ?? 'pending'},
+        payment_method = ${payment_method ?? null}, due_date = ${due_date ?? null},
+        notes = ${notes ?? null}, paid_at = ${paidAt as string | null}
+    WHERE id = ${id}
+  `
 
-  if (await isMonthClosed(current?.due_date)) {
-    return {
-      success: false,
-      error: 'O mês deste pagamento já foi fechado. Reabra o fechamento mensal para editar.',
-    }
-  }
-
-  const status = parsed.data.status
-  const paidAt = status === 'paid' ? new Date().toISOString() : current?.paid_at ?? null
-
-  const { error } = await supabase
-    .from('payments')
-    .update({ ...parsed.data, session_id: parsed.data.session_id || null, paid_at: paidAt })
-    .eq('id', id)
-
-  if (error) return { success: false, error: 'Erro ao atualizar pagamento.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'payment',
-    entity_id: id,
-    patient_id: parsed.data.patient_id,
-    action: 'update',
-    old_value: current,
-    new_value: parsed.data,
-  })
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+    VALUES ('payment', ${id}::uuid, ${patient_id}::uuid, 'update',
+            ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
+  `
 
   revalidatePath('/financeiro')
   return { success: true, data: undefined }
 }
 
 export async function getPaymentsByPatient(patientId: string): Promise<Payment[]> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('due_date', { ascending: false })
-
-  return (data ?? []) as Payment[]
+  const rows = await sql`
+    SELECT * FROM payments WHERE patient_id = ${patientId} ORDER BY due_date DESC
+  `
+  return rows as unknown as Payment[]
 }
 
 export async function getPaymentsByMonth(periodKey: string): Promise<PaymentWithPatient[]> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('payments')
-    .select('*, patients(name)')
-    .gte('due_date', `${periodKey}-01`)
-    .lt('due_date', `${periodKey}-32`)
-    .order('due_date')
-
-  return (data ?? []).map((row) => {
-    const { patients, ...rest } = row as typeof row & { patients: { name: string } | null }
-    return { ...rest, patient_name: patients?.name ?? 'Paciente' }
-  }) as PaymentWithPatient[]
+  const start = `${periodKey}-01`
+  const end = `${periodKey}-32`
+  const rows = await sql`
+    SELECT p.*, pt.name AS patient_name
+    FROM payments p
+    LEFT JOIN patients pt ON pt.id = p.patient_id
+    WHERE p.due_date >= ${start} AND p.due_date < ${end}
+    ORDER BY p.due_date
+  `
+  return rows as unknown as PaymentWithPatient[]
 }
 
 export async function getPayment(id: string): Promise<Payment | null> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase.from('payments').select('*').eq('id', id).single()
-  return (data ?? null) as Payment | null
+  const rows = await sql`SELECT * FROM payments WHERE id = ${id} LIMIT 1`
+  return (rows[0] ?? null) as Payment | null
 }

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import { PaymentForm } from '@/components/financeiro/payment-form'
 import { getPayment } from '@/app/actions/payments'

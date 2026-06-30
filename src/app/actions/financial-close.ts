@@ -1,97 +1,58 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createAdminClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/client'
 import type { ActionResult, FinancialClose } from '@/types'
 
 export async function getFinancialClose(periodKey: string): Promise<FinancialClose | null> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('financial_closes')
-    .select('*')
-    .eq('period_key', periodKey)
-    .single()
-  return (data ?? null) as FinancialClose | null
+  const rows = await sql`SELECT * FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`
+  return (rows[0] ?? null) as FinancialClose | null
 }
 
 export async function closeMonth(periodKey: string): Promise<ActionResult<void>> {
-  const supabase = await createAdminClient()
+  const start = `${periodKey}-01`
+  const end = `${periodKey}-32`
 
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('amount, amount_paid')
-    .gte('due_date', `${periodKey}-01`)
-    .lt('due_date', `${periodKey}-32`)
+  const payments = await sql`
+    SELECT amount, amount_paid FROM payments WHERE due_date >= ${start} AND due_date < ${end}
+  `
+  const totalExpected = payments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
+  const totalReceived = payments.reduce((sum, p) => sum + Number(p.amount_paid ?? 0), 0)
 
-  const totalExpected = (payments ?? []).reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
-  const totalReceived = (payments ?? []).reduce((sum, p) => sum + Number(p.amount_paid ?? 0), 0)
+  const existing = (await sql`SELECT id FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`)[0]
+  if (existing) return { success: false, error: 'Este mês já possui um fechamento.' }
 
-  const { data: existing } = await supabase
-    .from('financial_closes')
-    .select('id')
-    .eq('period_key', periodKey)
-    .single()
+  const rows = await sql`
+    INSERT INTO financial_closes (period_key, total_expected, total_received, closed_at)
+    VALUES (${periodKey}, ${totalExpected}, ${totalReceived}, ${new Date().toISOString()})
+    RETURNING id
+  `
+  const row = rows[0]
+  if (!row) return { success: false, error: 'Erro ao fechar o mês.' }
 
-  if (existing) {
-    return { success: false, error: 'Este mês já possui um fechamento.' }
-  }
-
-  const { data, error } = await supabase
-    .from('financial_closes')
-    .insert({
-      period_key: periodKey,
-      total_expected: totalExpected,
-      total_received: totalReceived,
-      closed_at: new Date().toISOString(),
-    })
-    .select('id')
-    .single()
-
-  if (error) return { success: false, error: 'Erro ao fechar o mês.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'financial_close',
-    entity_id: data.id,
-    action: 'finalize',
-    new_value: { period_key: periodKey, total_expected: totalExpected, total_received: totalReceived },
-  })
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, action, new_value)
+    VALUES ('financial_close', ${row.id as string}::uuid, 'finalize',
+            ${JSON.stringify({ period_key: periodKey, total_expected: totalExpected, total_received: totalReceived })})
+  `
 
   revalidatePath('/financeiro')
   return { success: true, data: undefined }
 }
 
-export async function reopenMonth(
-  periodKey: string,
-  justification: string
-): Promise<ActionResult<void>> {
-  if (!justification?.trim()) {
-    return { success: false, error: 'Justificativa é obrigatória.' }
-  }
+export async function reopenMonth(periodKey: string, justification: string): Promise<ActionResult<void>> {
+  if (!justification?.trim()) return { success: false, error: 'Justificativa é obrigatória.' }
 
-  const supabase = await createAdminClient()
-
-  const { data: current } = await supabase
-    .from('financial_closes')
-    .select('*')
-    .eq('period_key', periodKey)
-    .single()
-
+  const current = (await sql`SELECT * FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`)[0]
   if (!current) return { success: false, error: 'Fechamento não encontrado.' }
 
-  const { error } = await supabase
-    .from('financial_closes')
-    .update({ reopened_at: new Date().toISOString() })
-    .eq('id', current.id)
+  await sql`UPDATE financial_closes SET reopened_at = ${new Date().toISOString()} WHERE id = ${current.id}`
 
-  if (error) return { success: false, error: 'Erro ao reabrir o mês.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'financial_close',
-    entity_id: current.id,
-    action: 'reopen',
-    old_value: current,
-    justification,
-  })
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, action, old_value, justification)
+    VALUES ('financial_close', ${current.id as string}::uuid, 'reopen',
+            ${JSON.stringify(current)}, ${justification})
+  `
 
   revalidatePath('/financeiro')
   return { success: true, data: undefined }

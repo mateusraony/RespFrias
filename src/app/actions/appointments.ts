@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/client'
 import type { ActionResult, Appointment, AppointmentWithPatient } from '@/types'
 
 const appointmentSchema = z.object({
@@ -14,135 +14,84 @@ const appointmentSchema = z.object({
   notes: z.string().optional(),
 })
 
-export async function createAppointment(
-  formData: FormData
-): Promise<ActionResult<{ id: string }>> {
+export async function createAppointment(formData: FormData): Promise<ActionResult<{ id: string }>> {
   const parsed = appointmentSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
-  }
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('appointments')
-    .insert(parsed.data)
-    .select('id')
-    .single()
-
-  if (error) return { success: false, error: 'Erro ao criar agendamento.' }
+  const { patient_id, date, time, duration_minutes, status, notes } = parsed.data
+  const rows = await sql`
+    INSERT INTO appointments (patient_id, date, time, duration_minutes, status, notes)
+    VALUES (${patient_id}, ${date}, ${time}, ${duration_minutes ?? 50}, ${status ?? 'pending'}, ${notes ?? null})
+    RETURNING id
+  `
+  const row = rows[0]
+  if (!row) return { success: false, error: 'Erro ao criar agendamento.' }
 
   revalidatePath('/agenda')
-  return { success: true, data: { id: data.id } }
+  return { success: true, data: { id: row.id as string } }
 }
 
-export async function updateAppointment(
-  id: string,
-  formData: FormData
-): Promise<ActionResult<void>> {
+export async function updateAppointment(id: string, formData: FormData): Promise<ActionResult<void>> {
   const parsed = appointmentSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
-  }
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const supabase = await createAdminClient()
-  const { error } = await supabase.from('appointments').update(parsed.data).eq('id', id)
-
-  if (error) return { success: false, error: 'Erro ao atualizar agendamento.' }
-
-  revalidatePath('/agenda')
-  return { success: true, data: undefined }
-}
-
-export async function updateAppointmentStatus(
-  id: string,
-  status: Appointment['status']
-): Promise<ActionResult<void>> {
-  const supabase = await createAdminClient()
-  const { error } = await supabase.from('appointments').update({ status }).eq('id', id)
-
-  if (error) return { success: false, error: 'Erro ao atualizar status.' }
+  const { patient_id, date, time, duration_minutes, status, notes } = parsed.data
+  await sql`
+    UPDATE appointments
+    SET patient_id = ${patient_id}, date = ${date}, time = ${time},
+        duration_minutes = ${duration_minutes ?? 50}, status = ${status ?? 'pending'}, notes = ${notes ?? null}
+    WHERE id = ${id}
+  `
 
   revalidatePath('/agenda')
   return { success: true, data: undefined }
 }
 
-export async function cancelAppointment(
-  id: string,
-  justification: string
-): Promise<ActionResult<void>> {
-  if (!justification?.trim()) {
-    return { success: false, error: 'Justificativa é obrigatória.' }
-  }
+export async function updateAppointmentStatus(id: string, status: Appointment['status']): Promise<ActionResult<void>> {
+  await sql`UPDATE appointments SET status = ${status} WHERE id = ${id}`
+  revalidatePath('/agenda')
+  return { success: true, data: undefined }
+}
 
-  const supabase = await createAdminClient()
+export async function cancelAppointment(id: string, justification: string): Promise<ActionResult<void>> {
+  if (!justification?.trim()) return { success: false, error: 'Justificativa é obrigatória.' }
 
-  const { data: current } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const current = (await sql`SELECT * FROM appointments WHERE id = ${id} LIMIT 1`)[0]
+  await sql`UPDATE appointments SET status = 'cancelled' WHERE id = ${id}`
 
-  const { error } = await supabase
-    .from('appointments')
-    .update({ status: 'cancelled' })
-    .eq('id', id)
-
-  if (error) return { success: false, error: 'Erro ao cancelar agendamento.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'appointment',
-    entity_id: id,
-    patient_id: current?.patient_id,
-    action: 'update',
-    old_value: current,
-    new_value: { status: 'cancelled' },
-    justification,
-  })
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value, justification)
+    VALUES ('appointment', ${id}::uuid, ${current?.patient_id ?? null}::uuid, 'update',
+            ${JSON.stringify(current)}, ${JSON.stringify({ status: 'cancelled' })}, ${justification})
+  `
 
   revalidatePath('/agenda')
   return { success: true, data: undefined }
 }
 
-export async function getAppointmentsByRange(
-  startDate: string,
-  endDate: string
-): Promise<AppointmentWithPatient[]> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('appointments')
-    .select('*, patients(name)')
-    .is('deleted_at', null)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date')
-    .order('time')
-
-  return (data ?? []).map((row) => {
-    const { patients, ...rest } = row as typeof row & { patients: { name: string } | null }
-    return { ...rest, patient_name: patients?.name ?? 'Paciente' }
-  }) as AppointmentWithPatient[]
+export async function getAppointmentsByRange(startDate: string, endDate: string): Promise<AppointmentWithPatient[]> {
+  const rows = await sql`
+    SELECT a.*, p.name AS patient_name
+    FROM appointments a
+    LEFT JOIN patients p ON p.id = a.patient_id
+    WHERE a.deleted_at IS NULL AND a.date >= ${startDate} AND a.date <= ${endDate}
+    ORDER BY a.date, a.time
+  `
+  return rows as unknown as AppointmentWithPatient[]
 }
 
 export async function getAppointmentsByPatient(patientId: string): Promise<Appointment[]> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('patient_id', patientId)
-    .is('deleted_at', null)
-    .order('date', { ascending: false })
-    .order('time', { ascending: false })
-
-  return (data ?? []) as Appointment[]
+  const rows = await sql`
+    SELECT * FROM appointments
+    WHERE patient_id = ${patientId} AND deleted_at IS NULL
+    ORDER BY date DESC, time DESC
+  `
+  return rows as unknown as Appointment[]
 }
 
 export async function getAppointment(id: string): Promise<Appointment | null> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('id', id)
-    .is('deleted_at', null)
-    .single()
-  return (data ?? null) as Appointment | null
+  const rows = await sql`
+    SELECT * FROM appointments WHERE id = ${id} AND deleted_at IS NULL LIMIT 1
+  `
+  return (rows[0] ?? null) as Appointment | null
 }

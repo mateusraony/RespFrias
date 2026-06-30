@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/server'
+import sql from '@/lib/db/client'
 import type { ActionResult, Patient } from '@/types'
 
 const patientSchema = z.object({
@@ -15,127 +15,72 @@ const patientSchema = z.object({
   notes: z.string().optional(),
 })
 
-export async function createPatient(
-  formData: FormData
-): Promise<ActionResult<{ id: string }>> {
-  const raw = Object.fromEntries(formData)
-  const parsed = patientSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
-  }
+export async function createPatient(formData: FormData): Promise<ActionResult<{ id: string }>> {
+  const parsed = patientSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const supabase = await createAdminClient()
-  const { data, error } = await supabase
-    .from('patients')
-    .insert({ ...parsed.data, email: parsed.data.email || null })
-    .select('id')
-    .single()
-
-  if (error) return { success: false, error: 'Erro ao criar paciente.' }
+  const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
+  const rows = await sql`
+    INSERT INTO patients (name, email, phone, birth_date, diagnosis, notes)
+    VALUES (${name}, ${email || null}, ${phone ?? null}, ${birth_date ?? null}, ${diagnosis ?? null}, ${notes ?? null})
+    RETURNING id
+  `
+  const row = rows[0]
+  if (!row) return { success: false, error: 'Erro ao criar paciente.' }
 
   revalidatePath('/pacientes')
-  return { success: true, data: { id: data.id } }
+  return { success: true, data: { id: row.id as string } }
 }
 
-export async function updatePatient(
-  id: string,
-  formData: FormData
-): Promise<ActionResult<void>> {
-  const raw = Object.fromEntries(formData)
-  const parsed = patientSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
-  }
+export async function updatePatient(id: string, formData: FormData): Promise<ActionResult<void>> {
+  const parsed = patientSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const supabase = await createAdminClient()
+  const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
 
-  // Fetch current for audit
-  const { data: current } = await supabase
-    .from('patients')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
+  await sql`
+    UPDATE patients
+    SET name = ${name}, email = ${email || null}, phone = ${phone ?? null},
+        birth_date = ${birth_date ?? null}, diagnosis = ${diagnosis ?? null}, notes = ${notes ?? null}
+    WHERE id = ${id}
+  `
 
-  const { error } = await supabase
-    .from('patients')
-    .update({ ...parsed.data, email: parsed.data.email || null })
-    .eq('id', id)
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+    VALUES ('patient', ${id}::uuid, ${id}::uuid, 'update', ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
+  `
 
-  if (error) return { success: false, error: 'Erro ao atualizar paciente.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'patient',
-    entity_id: id,
-    patient_id: id,
-    action: 'update',
-    old_value: current,
-    new_value: parsed.data,
-  })
-
-  revalidatePath(`/pacientes/${id}`)
   revalidatePath('/pacientes')
+  revalidatePath(`/pacientes/${id}`)
   return { success: true, data: undefined }
 }
 
-export async function softDeletePatient(
-  id: string,
-  justification: string
-): Promise<ActionResult<void>> {
-  if (!justification?.trim()) {
-    return { success: false, error: 'Justificativa é obrigatória.' }
-  }
+export async function softDeletePatient(id: string, justification: string): Promise<ActionResult<void>> {
+  if (!justification?.trim()) return { success: false, error: 'Justificativa é obrigatória.' }
 
-  const supabase = await createAdminClient()
+  const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
+  if (!current) return { success: false, error: 'Paciente não encontrado.' }
 
-  const { data: current } = await supabase
-    .from('patients')
-    .select('*')
-    .eq('id', id)
-    .single()
+  await sql`UPDATE patients SET deleted_at = now() WHERE id = ${id}`
 
-  const { error } = await supabase
-    .from('patients')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id)
-
-  if (error) return { success: false, error: 'Erro ao remover paciente.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'patient',
-    entity_id: id,
-    patient_id: id,
-    action: 'delete',
-    old_value: current,
-    justification,
-  })
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, justification)
+    VALUES ('patient', ${id}::uuid, ${id}::uuid, 'delete', ${JSON.stringify(current)}, ${justification})
+  `
 
   revalidatePath('/pacientes')
   redirect('/pacientes')
 }
 
 export async function getPatients(search?: string): Promise<Patient[]> {
-  const supabase = await createAdminClient()
-  let query = supabase
-    .from('patients')
-    .select('*')
-    .is('deleted_at', null)
-    .order('name')
-
-  if (search?.trim()) {
-    query = query.ilike('name', `%${search}%`)
-  }
-
-  const { data } = await query
-  return (data ?? []) as Patient[]
+  const rows = search?.trim()
+    ? await sql`SELECT * FROM patients WHERE deleted_at IS NULL AND name ILIKE ${'%' + search + '%'} ORDER BY name`
+    : await sql`SELECT * FROM patients WHERE deleted_at IS NULL ORDER BY name`
+  return rows as unknown as Patient[]
 }
 
 export async function getPatient(id: string): Promise<Patient | null> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('patients')
-    .select('*')
-    .eq('id', id)
-    .is('deleted_at', null)
-    .single()
-  return (data ?? null) as Patient | null
+  const rows = await sql`SELECT * FROM patients WHERE id = ${id} AND deleted_at IS NULL LIMIT 1`
+  return (rows[0] ?? null) as Patient | null
 }

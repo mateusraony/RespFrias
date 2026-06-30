@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { PaymentForm } from '@/components/financeiro/payment-form'
 import { getPatients } from '@/app/actions/patients'
 

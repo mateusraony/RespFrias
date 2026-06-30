@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import MiniCalendar from '@/components/dashboard/mini-calendar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -384,32 +385,18 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Integrações */}
+        {/* Mini-calendário */}
         <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Integrações</CardTitle>
+          <CardHeader className="pb-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Calendário</CardTitle>
+              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">
+                Ver agenda
+              </a>
+            </div>
           </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">📅</span>
-                <span className="text-sm font-medium text-gray-900">Google Calendar</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="success">Sincronizado</Badge>
-                <button className="text-gray-400 hover:text-gray-600">⋮</button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">✈️</span>
-                <span className="text-sm font-medium text-gray-900">Telegram</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="success">Sincronizado</Badge>
-                <button className="text-gray-400 hover:text-gray-600">⋮</button>
-              </div>
-            </div>
+          <CardContent className="pt-0 px-0">
+            <MiniCalendar />
           </CardContent>
         </Card>
       </div>
