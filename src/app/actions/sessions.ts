@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/supabase/server'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import sql from '@/lib/db/client'
 import type { ActionResult, Session } from '@/types'
 
 const sessionSchema = z.object({
@@ -25,11 +25,9 @@ const sessionSchema = z.object({
 
 function generateDraft(patientName: string, data: z.infer<typeof sessionSchema>): string {
   const dateStr = data.date
-    ? format(new Date(data.date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })
+    ? format(new Date(data.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
     : ''
-
   const typeLabel = data.session_type === 'quick' ? 'rápida' : 'completa'
-
   const vitals: string[] = []
   if (data.spo2_before != null && data.spo2_after != null)
     vitals.push(`SpO₂: ${data.spo2_before}% → ${data.spo2_after}%`)
@@ -39,18 +37,11 @@ function generateDraft(patientName: string, data: z.infer<typeof sessionSchema>)
     vitals.push(`FR: ${data.respiratory_rate_before} → ${data.respiratory_rate_after} irpm`)
   if (data.heart_rate_before != null && data.heart_rate_after != null)
     vitals.push(`FC: ${data.heart_rate_before} → ${data.heart_rate_after} bpm`)
-
-  const techniquesLine = data.techniques_used?.length
-    ? `Técnicas aplicadas: ${data.techniques_used.join(', ')}.`
-    : ''
-
-  const notesLine = data.notes?.trim() ? `Observações: ${data.notes.trim()}.` : ''
-
   return [
     `Paciente ${patientName} realizou sessão ${typeLabel} de fisioterapia respiratória em ${dateStr}.`,
     vitals.length ? vitals.join(' | ') + '.' : '',
-    techniquesLine,
-    notesLine,
+    data.techniques_used?.length ? `Técnicas aplicadas: ${data.techniques_used.join(', ')}.` : '',
+    data.notes?.trim() ? `Observações: ${data.notes.trim()}.` : '',
     'Conduta para próxima sessão: [a preencher]',
   ]
     .filter(Boolean)
@@ -62,28 +53,36 @@ export async function createSession(
   patientName: string,
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
-  const raw = {
-    ...Object.fromEntries(formData),
-    techniques_used: formData.getAll('techniques_used'),
-  }
+  const raw = { ...Object.fromEntries(formData), techniques_used: formData.getAll('techniques_used') }
   const parsed = sessionSchema.safeParse(raw)
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message }
-  }
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
   const draft = generateDraft(patientName, parsed.data)
-  const supabase = await createAdminClient()
+  const {
+    session_type, date, duration_minutes, spo2_before, spo2_after,
+    borg_before, borg_after, respiratory_rate_before, respiratory_rate_after,
+    heart_rate_before, heart_rate_after, techniques_used, notes,
+  } = parsed.data
 
-  const { data, error } = await supabase
-    .from('sessions')
-    .insert({ ...parsed.data, patient_id: patientId, evolution_draft: draft })
-    .select('id')
-    .single()
-
-  if (error) return { success: false, error: 'Erro ao salvar sessão.' }
+  const rows = await sql`
+    INSERT INTO sessions
+      (patient_id, session_type, date, duration_minutes, spo2_before, spo2_after,
+       borg_before, borg_after, respiratory_rate_before, respiratory_rate_after,
+       heart_rate_before, heart_rate_after, techniques_used, notes, evolution_draft)
+    VALUES
+      (${patientId}, ${session_type}, ${date}, ${duration_minutes ?? null},
+       ${spo2_before ?? null}, ${spo2_after ?? null}, ${borg_before ?? null}, ${borg_after ?? null},
+       ${respiratory_rate_before ?? null}, ${respiratory_rate_after ?? null},
+       ${heart_rate_before ?? null}, ${heart_rate_after ?? null},
+       ${techniques_used?.length ? sql`${techniques_used}` : sql`'{}'::text[]`},
+       ${notes ?? null}, ${draft})
+    RETURNING id
+  `
+  const row = rows[0]
+  if (!row) return { success: false, error: 'Erro ao salvar sessão.' }
 
   revalidatePath(`/pacientes/${patientId}`)
-  return { success: true, data: { id: data.id } }
+  return { success: true, data: { id: row.id as string } }
 }
 
 export async function saveDraftEvolution(
@@ -91,59 +90,37 @@ export async function saveDraftEvolution(
   patientId: string,
   draft: string
 ): Promise<ActionResult<void>> {
-  const supabase = await createAdminClient()
-  const { error } = await supabase
-    .from('sessions')
-    .update({ evolution_draft: draft, evolution_finalized_at: null })
-    .eq('id', sessionId)
-    .is('evolution_finalized_at', null) // só edita se não finalizado
-
-  if (error) return { success: false, error: 'Erro ao salvar rascunho.' }
-
+  await sql`
+    UPDATE sessions
+    SET evolution_draft = ${draft}, evolution_finalized_at = NULL
+    WHERE id = ${sessionId} AND evolution_finalized_at IS NULL
+  `
   revalidatePath(`/pacientes/${patientId}/sessoes/${sessionId}`)
   return { success: true, data: undefined }
 }
 
-export async function finalizeEvolution(
-  sessionId: string,
-  patientId: string
-): Promise<ActionResult<void>> {
-  const supabase = await createAdminClient()
-
-  // Busca rascunho atual
-  const { data: session } = await supabase
-    .from('sessions')
-    .select('evolution_draft, evolution_finalized_at')
-    .eq('id', sessionId)
-    .single()
-
+export async function finalizeEvolution(sessionId: string, patientId: string): Promise<ActionResult<void>> {
+  const rows = await sql`
+    SELECT evolution_draft, evolution_finalized_at FROM sessions WHERE id = ${sessionId} LIMIT 1
+  `
+  const session = rows[0]
   if (!session) return { success: false, error: 'Sessão não encontrada.' }
-  if (session.evolution_finalized_at) {
-    return { success: false, error: 'Evolução já foi finalizada.' }
-  }
-  if (!session.evolution_draft?.trim()) {
-    return { success: false, error: 'Rascunho está vazio.' }
-  }
+  if (session.evolution_finalized_at) return { success: false, error: 'Evolução já foi finalizada.' }
+  if (!session.evolution_draft?.trim()) return { success: false, error: 'Rascunho está vazio.' }
 
   const now = new Date().toISOString()
+  await sql`
+    UPDATE sessions
+    SET evolution_final = ${session.evolution_draft as string},
+        evolution_finalized_at = ${now}
+    WHERE id = ${sessionId}
+  `
 
-  const { error } = await supabase
-    .from('sessions')
-    .update({
-      evolution_final: session.evolution_draft,
-      evolution_finalized_at: now,
-    })
-    .eq('id', sessionId)
-
-  if (error) return { success: false, error: 'Erro ao finalizar evolução.' }
-
-  await supabase.from('audit_logs').insert({
-    entity_type: 'session',
-    entity_id: sessionId,
-    patient_id: patientId,
-    action: 'finalize',
-    new_value: { evolution_final: session.evolution_draft, finalized_at: now },
-  })
+  await sql`
+    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, new_value)
+    VALUES ('session', ${sessionId}::uuid, ${patientId}::uuid, 'finalize',
+            ${JSON.stringify({ evolution_final: session.evolution_draft, finalized_at: now })})
+  `
 
   revalidatePath(`/pacientes/${patientId}/sessoes/${sessionId}`)
   revalidatePath(`/pacientes/${patientId}`)
@@ -151,17 +128,13 @@ export async function finalizeEvolution(
 }
 
 export async function getSessions(patientId: string): Promise<Session[]> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('date', { ascending: false })
-  return (data ?? []) as Session[]
+  const rows = await sql`
+    SELECT * FROM sessions WHERE patient_id = ${patientId} ORDER BY date DESC
+  `
+  return rows as unknown as Session[]
 }
 
 export async function getSession(id: string): Promise<Session | null> {
-  const supabase = await createAdminClient()
-  const { data } = await supabase.from('sessions').select('*').eq('id', id).single()
-  return (data ?? null) as Session | null
+  const rows = await sql`SELECT * FROM sessions WHERE id = ${id} LIMIT 1`
+  return (rows[0] ?? null) as Session | null
 }

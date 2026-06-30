@@ -3,7 +3,7 @@
 # RespFrias — Regras do Projeto
 
 Sistema de fisioterapia respiratória para uso pessoal.
-Stack: Next.js + TypeScript + Tailwind + shadcn/ui + Supabase. Deploy: Render.
+Stack: Next.js + TypeScript + Tailwind + shadcn/ui + Nhost Postgres. Deploy: Render.
 
 ## Regras absolutas
 
@@ -23,15 +23,13 @@ Stack: Next.js + TypeScript + Tailwind + shadcn/ui + Supabase. Deploy: Render.
 14. **Toda ação crítica deve ter confirmação do usuário.**
 15. **Toda alteração crítica deve gerar registro de auditoria** (antes/depois, justificativa, data/hora).
 16. **TypeScript obrigatório em todos os arquivos.**
-17. **Usar Supabase como banco oficial.** Sem outros bancos ou ORMs.
+17. **Usar Nhost Postgres como banco oficial.** Acesso via `postgres` (porsager) — SQL direto, sem ORM. `DATABASE_URL` é backend only.
 
 ## Variáveis de ambiente
 
 | Variável | Onde usar |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Frontend + Backend |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend + Backend |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Backend apenas** |
+| `DATABASE_URL` | **Backend apenas** |
 | `AUTH_ENABLED` | Backend apenas |
 | `APP_PASSWORD` | Backend apenas |
 | `GOOGLE_CLIENT_ID` | Backend apenas |

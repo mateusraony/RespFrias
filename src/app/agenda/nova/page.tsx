@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { AppointmentForm } from '@/components/agenda/appointment-form'
 import { getPatients } from '@/app/actions/patients'
 
