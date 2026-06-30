@@ -94,12 +94,27 @@ export interface Appointment {
   patient_id: string
   date: string
   time: string
+  duration_minutes: number
   status: AppointmentStatus
+  notes?: string
   google_event_id?: string
   google_sync_status?: 'synced' | 'failed' | 'pending'
   created_at: string
   updated_at: string
   deleted_at?: string
+}
+
+export interface AppointmentWithPatient extends Appointment {
+  patient_name: string
+}
+
+export interface AppointmentInput {
+  patient_id: string
+  date: string
+  time: string
+  duration_minutes?: number
+  status?: AppointmentStatus
+  notes?: string
 }
 
 export interface Payment {
