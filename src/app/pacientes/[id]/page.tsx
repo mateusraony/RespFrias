@@ -16,6 +16,8 @@ import { getSessions } from '@/app/actions/sessions'
 import { getGoals } from '@/app/actions/goals'
 import { getAuditLogs } from '@/app/actions/audit'
 import { getAppointmentsByPatient } from '@/app/actions/appointments'
+import { getPaymentsByPatient } from '@/app/actions/payments'
+import { PaymentStatusBadge } from '@/components/financeiro/payment-status-badge'
 
 export default async function PacientePage({
   params,
@@ -26,14 +28,16 @@ export default async function PacientePage({
   const patient = await getPatient(id)
   if (!patient) notFound()
 
-  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments] = await Promise.all([
-    getClinicalFile(id),
-    getAssessments(id),
-    getSessions(id),
-    getGoals(id),
-    getAuditLogs(id),
-    getAppointmentsByPatient(id),
-  ])
+  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments, patientPayments] =
+    await Promise.all([
+      getClinicalFile(id),
+      getAssessments(id),
+      getSessions(id),
+      getGoals(id),
+      getAuditLogs(id),
+      getAppointmentsByPatient(id),
+      getPaymentsByPatient(id),
+    ])
 
   const activeGoals = goals.filter((g) => g.status === 'active')
 
@@ -264,7 +268,37 @@ export default async function PacientePage({
     {
       key: 'pagamentos',
       label: 'Pagamentos',
-      content: <PlaceholderTab text="Pagamentos serão implementados na Fase 3." />,
+      content: (
+        <div className="space-y-2">
+          {patientPayments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>
+          ) : (
+            patientPayments.map((p) => (
+              <Card key={p.id}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
+                  <div>
+                    <p className="font-medium">
+                      {p.due_date
+                        ? format(new Date(p.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
+                        : 'Sem vencimento'}
+                    </p>
+                    {p.notes && <p className="text-muted-foreground">{p.notes}</p>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="font-medium">
+                      {Number(p.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                    <PaymentStatusBadge status={p.status} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+          <p className="text-xs text-muted-foreground">
+            Veja o financeiro completo em <Link href="/financeiro" className="underline">/financeiro</Link>.
+          </p>
+        </div>
+      ),
     },
     {
       key: 'relatorios',
