@@ -15,6 +15,7 @@ import { getClinicalFile, getAssessments } from '@/app/actions/assessments'
 import { getSessions } from '@/app/actions/sessions'
 import { getGoals } from '@/app/actions/goals'
 import { getAuditLogs } from '@/app/actions/audit'
+import { getAppointmentsByPatient } from '@/app/actions/appointments'
 
 export default async function PacientePage({
   params,
@@ -25,12 +26,13 @@ export default async function PacientePage({
   const patient = await getPatient(id)
   if (!patient) notFound()
 
-  const [clinicalFile, assessments, sessions, goals, auditLogs] = await Promise.all([
+  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments] = await Promise.all([
     getClinicalFile(id),
     getAssessments(id),
     getSessions(id),
     getGoals(id),
     getAuditLogs(id),
+    getAppointmentsByPatient(id),
   ])
 
   const activeGoals = goals.filter((g) => g.status === 'active')
@@ -214,7 +216,50 @@ export default async function PacientePage({
     {
       key: 'agenda',
       label: 'Agenda',
-      content: <PlaceholderTab text="Agenda será implementada na Fase 2." />,
+      content: (
+        <div className="space-y-3">
+          <Button asChild>
+            <Link href={`/agenda/nova`}>Novo agendamento</Link>
+          </Button>
+          {patientAppointments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum agendamento futuro.</p>
+          ) : (
+            patientAppointments.map((a) => (
+              <Card key={a.id}>
+                <CardContent className="flex items-center justify-between gap-3 p-4 text-sm">
+                  <div>
+                    <p className="font-medium">
+                      {format(new Date(a.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} ·{' '}
+                      {a.time.slice(0, 5)}
+                    </p>
+                    {a.notes && <p className="text-muted-foreground">{a.notes}</p>}
+                  </div>
+                  <Badge
+                    variant={
+                      a.status === 'cancelled'
+                        ? 'destructive'
+                        : a.status === 'done'
+                          ? 'secondary'
+                          : a.status === 'confirmed'
+                            ? 'success'
+                            : 'warning'
+                    }
+                  >
+                    {
+                      { pending: 'Pendente', confirmed: 'Confirmado', done: 'Realizado', cancelled: 'Cancelado' }[
+                        a.status
+                      ]
+                    }
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))
+          )}
+          <p className="text-xs text-muted-foreground">
+            Veja a agenda completa em <Link href="/agenda" className="underline">/agenda</Link>.
+          </p>
+        </div>
+      ),
     },
     {
       key: 'pagamentos',
