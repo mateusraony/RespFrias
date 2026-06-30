@@ -132,6 +132,32 @@ export interface Payment {
   updated_at: string
 }
 
+export interface PaymentWithPatient extends Payment {
+  patient_name: string
+}
+
+export interface PaymentInput {
+  patient_id: string
+  session_id?: string
+  amount: number
+  amount_paid?: number
+  status?: PaymentStatus
+  payment_method?: string
+  due_date?: string
+  notes?: string
+}
+
+export interface FinancialClose {
+  id: string
+  period_key: string
+  total_expected: number
+  total_received: number
+  closed_at: string
+  reopened_at?: string
+  created_at: string
+  updated_at: string
+}
+
 export interface PatientAlert {
   patient_id: string
   patient_name: string
