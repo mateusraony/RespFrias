@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
+import { safeDate } from '@/lib/format'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PatientTabs } from '@/components/pacientes/patient-tabs'
@@ -30,13 +31,6 @@ import { SessionChartsWrapper } from '@/components/pacientes/session-charts-wrap
 import { PackageWidget } from '@/components/pacientes/package-widget'
 import { getActivePackage } from '@/app/actions/packages'
 
-function safeDate(val: unknown): string {
-  if (!val) return '—'
-  try {
-    const d = val instanceof Date ? val : new Date(String(val) + 'T12:00:00')
-    return format(d, 'dd/MM/yyyy', { locale: ptBR })
-  } catch { return '—' }
-}
 
 export default async function PacientePage({
   params,

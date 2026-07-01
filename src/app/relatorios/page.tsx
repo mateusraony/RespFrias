@@ -1,21 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { FileText } from 'lucide-react'
+import { safeDate } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getAllReports } from '@/app/actions/reports'
 
-function safeDate(val: unknown): string {
-  if (!val) return '—'
-  try {
-    const d = new Date(String(val))
-    return format(d, 'dd/MM/yyyy', { locale: ptBR })
-  } catch { return '—' }
-}
 
 export default async function RelatoriosPage() {
   const reports = await getAllReports()

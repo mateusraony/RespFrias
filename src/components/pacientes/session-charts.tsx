@@ -26,7 +26,7 @@ interface ChartPoint {
   heart_rate_after?: number
 }
 
-function safeDate(val: unknown): string {
+function formatShortDate(val: unknown): string {
   if (!val) return '—'
   try {
     return format(new Date(String(val) + 'T12:00:00'), 'dd/MM', { locale: ptBR })
@@ -84,7 +84,7 @@ export function SessionCharts({ sessions }: { sessions: Session[] }) {
   const data: ChartPoint[] = [...sessions]
     .reverse()
     .map((s) => ({
-      date: safeDate(s.date),
+      date: formatShortDate(s.date),
       spo2_before: s.spo2_before ?? undefined,
       spo2_after: s.spo2_after ?? undefined,
       borg_before: s.borg_before ?? undefined,
