@@ -89,7 +89,7 @@ export async function cancelAppointment(id: string, justification: string): Prom
 export async function getAppointmentsByRange(startDate: string, endDate: string): Promise<AppointmentWithPatient[]> {
   try {
     const rows = await sql`
-      SELECT a.*, p.name AS patient_name
+      SELECT a.*, p.name AS patient_name, p.color AS patient_color
       FROM appointments a
       LEFT JOIN patients p ON p.id = a.patient_id
       WHERE a.deleted_at IS NULL AND a.date >= ${startDate} AND a.date <= ${endDate}

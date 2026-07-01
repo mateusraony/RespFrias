@@ -20,6 +20,7 @@ export interface Patient {
   birth_date?: string
   diagnosis?: string
   notes?: string
+  color: string
   is_fictitious: boolean
   created_at: string
   updated_at: string
@@ -106,6 +107,7 @@ export interface Appointment {
 
 export interface AppointmentWithPatient extends Appointment {
   patient_name: string
+  patient_color?: string
 }
 
 export interface AppointmentInput {
