@@ -8,6 +8,22 @@ import { getClinicalFile, getAssessments } from './assessments'
 import { getSessions } from './sessions'
 import { getGoals } from './goals'
 
+export async function getAllReports(): Promise<(Report & { patient_name: string })[]> {
+  try {
+    const rows = await sql`
+      SELECT r.*, p.name AS patient_name
+      FROM reports r
+      JOIN patients p ON p.id = r.patient_id
+      WHERE p.deleted_at IS NULL
+      ORDER BY r.created_at DESC
+    `
+    return rows as unknown as (Report & { patient_name: string })[]
+  } catch (err) {
+    console.error('getAllReports error:', err)
+    return []
+  }
+}
+
 export async function getReports(patientId: string): Promise<Report[]> {
   try {
     const rows = await sql`
