@@ -16,7 +16,7 @@ export default async function AgendaPage({
   searchParams: Promise<{ view?: string; data?: string }>
 }) {
   const { view: rawView, data } = await searchParams
-  const view: AgendaView = rawView === 'dia' || rawView === 'mes' ? rawView : 'semana'
+  const view: AgendaView = rawView === 'semana' || rawView === 'mes' ? rawView : 'dia'
   const date = parseAgendaDate(data)
   const { start, end } = getRange(view, date)
 

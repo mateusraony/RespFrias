@@ -119,6 +119,32 @@ export async function getPaymentsByMonth(periodKey: string): Promise<PaymentWith
   }
 }
 
+export async function markAsPaid(id: string): Promise<ActionResult<void>> {
+  try {
+    const current = (await sql`SELECT * FROM payments WHERE id = ${id} LIMIT 1`)[0]
+    if (!current) return { success: false, error: 'Pagamento não encontrado.' }
+
+    if (await isMonthClosed(current?.due_date as string | undefined)) {
+      return { success: false, error: 'O mês deste pagamento já foi fechado.' }
+    }
+
+    const now = new Date().toISOString()
+    await sql`
+      UPDATE payments SET status = 'paid', amount_paid = amount, paid_at = ${now} WHERE id = ${id}
+    `
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+      VALUES ('payment', ${id}::uuid, ${current.patient_id as string}::uuid, 'update',
+              ${JSON.stringify(current)}, ${JSON.stringify({ status: 'paid' })})
+    `
+    revalidatePath('/financeiro')
+    return { success: true, data: undefined }
+  } catch (err) {
+    console.error('markAsPaid error:', err)
+    return { success: false, error: 'Erro ao marcar como pago.' }
+  }
+}
+
 export async function getPayment(id: string): Promise<Payment | null> {
   try {
     const rows = await sql`SELECT * FROM payments WHERE id = ${id} LIMIT 1`

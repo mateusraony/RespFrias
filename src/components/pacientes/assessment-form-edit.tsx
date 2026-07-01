@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { createAssessment } from '@/app/actions/assessments'
+import { updateAssessment } from '@/app/actions/assessments'
+import type { Assessment } from '@/types'
 
-export function AssessmentForm({ patientId }: { patientId: string }) {
+export function AssessmentFormEdit({ assessment, patientId }: { assessment: Assessment; patientId: string }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -17,14 +18,14 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
   async function handleSubmit(formData: FormData) {
     setError(null)
     setLoading(true)
-    const result = await createAssessment(patientId, formData)
+    const result = await updateAssessment(assessment.id, patientId, formData)
     setLoading(false)
 
     if (!result.success) {
       setError(result.error)
       return
     }
-    router.push(`/pacientes/${patientId}`)
+    router.push(`/pacientes/${patientId}?tab=avaliacoes`)
   }
 
   return (
@@ -36,47 +37,47 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="assessment_type">Tipo *</Label>
-          <Select id="assessment_type" name="assessment_type" defaultValue="initial" required>
+          <Select id="assessment_type" name="assessment_type" defaultValue={assessment.assessment_type} required>
             <option value="initial">Avaliação inicial</option>
             <option value="periodic">Avaliação periódica</option>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="date">Data *</Label>
-          <Input id="date" name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+          <Input id="date" name="date" type="date" defaultValue={assessment.date} required />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label htmlFor="spo2">SpO₂ (%)</Label>
-          <Input id="spo2" name="spo2" type="number" step="1" min={0} max={100} />
+          <Input id="spo2" name="spo2" type="number" step="1" min={0} max={100} defaultValue={assessment.spo2 ?? ''} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="borg">Borg (0-10)</Label>
-          <Input id="borg" name="borg" type="number" step="0.5" min={0} max={10} />
+          <Input id="borg" name="borg" type="number" step="0.5" min={0} max={10} defaultValue={assessment.borg ?? ''} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="respiratory_rate">FR (irpm)</Label>
-          <Input id="respiratory_rate" name="respiratory_rate" type="number" />
+          <Input id="respiratory_rate" name="respiratory_rate" type="number" defaultValue={assessment.respiratory_rate ?? ''} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="heart_rate">FC (bpm)</Label>
-          <Input id="heart_rate" name="heart_rate" type="number" />
+          <Input id="heart_rate" name="heart_rate" type="number" defaultValue={assessment.heart_rate ?? ''} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="mrc_scale">Escala MRC (0-5)</Label>
-          <Input id="mrc_scale" name="mrc_scale" type="number" min={0} max={5} />
+          <Input id="mrc_scale" name="mrc_scale" type="number" min={0} max={5} defaultValue={assessment.mrc_scale ?? ''} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="six_mwt_distance">TC6 (m)</Label>
-          <Input id="six_mwt_distance" name="six_mwt_distance" type="number" />
+          <Input id="six_mwt_distance" name="six_mwt_distance" type="number" defaultValue={assessment.six_mwt_distance ?? ''} />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} />
+        <Textarea id="notes" name="notes" rows={4} defaultValue={assessment.notes ?? ''} />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -84,7 +85,7 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? 'Salvando...' : 'Salvar avaliação'}
+          {loading ? 'Salvando...' : 'Salvar alterações'}
         </Button>
       </div>
     </form>

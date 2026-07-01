@@ -13,10 +13,12 @@ import type { Patient, Payment } from '@/types'
 export function PaymentForm({
   patients,
   payment,
+  defaultPatientId,
   redirectTo,
 }: {
   patients: Patient[]
   payment?: Payment
+  defaultPatientId?: string
   redirectTo: string
 }) {
   const router = useRouter()
@@ -46,7 +48,7 @@ export function PaymentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="patient_id">Paciente *</Label>
-        <Select id="patient_id" name="patient_id" defaultValue={payment?.patient_id} required>
+        <Select id="patient_id" name="patient_id" defaultValue={payment?.patient_id ?? defaultPatientId} required>
           <option value="">Selecione um paciente</option>
           {patients.map((p) => (
             <option key={p.id} value={p.id}>
@@ -63,6 +65,7 @@ export function PaymentForm({
             id="amount"
             name="amount"
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0.01"
             defaultValue={payment?.amount}
@@ -75,6 +78,7 @@ export function PaymentForm({
             id="amount_paid"
             name="amount_paid"
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0"
             defaultValue={payment?.amount_paid}
@@ -100,12 +104,15 @@ export function PaymentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="payment_method">Forma de pagamento</Label>
-        <Input
-          id="payment_method"
-          name="payment_method"
-          placeholder="pix, dinheiro, cartão..."
-          defaultValue={payment?.payment_method}
-        />
+        <Select id="payment_method" name="payment_method" defaultValue={payment?.payment_method ?? ''}>
+          <option value="">Não informado</option>
+          <option value="PIX">PIX</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Cartão de crédito">Cartão de crédito</option>
+          <option value="Cartão de débito">Cartão de débito</option>
+          <option value="Transferência">Transferência</option>
+          <option value="Outro">Outro</option>
+        </Select>
       </div>
 
       <div className="space-y-1.5">

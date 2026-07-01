@@ -66,9 +66,16 @@ export default async function PacientePage({
               {sessions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma sessão registrada.</p>
               ) : (
-                sessions.slice(0, 3).map((s) => (
-                  <SessionCard key={s.id} session={s} patientId={id} />
-                ))
+                <>
+                  {sessions.slice(0, 3).map((s) => (
+                    <SessionCard key={s.id} session={s} patientId={id} />
+                  ))}
+                  {sessions.length > 3 && (
+                    <a href={`/pacientes/${id}?tab=sessoes`} className="block text-center text-sm text-[#0d7ea8] hover:underline">
+                      Ver todas as {sessions.length} sessões →
+                    </a>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -139,10 +146,15 @@ export default async function PacientePage({
             assessments.map((a) => (
               <Card key={a.id}>
                 <CardContent className="space-y-1 p-4 text-sm">
-                  <p className="font-medium">
-                    {safeDate(a.date)} ·{' '}
-                    {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">
+                      {safeDate(a.date)} ·{' '}
+                      {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
+                    </p>
+                    <Button asChild variant="outline" size="sm" className="shrink-0">
+                      <Link href={`/pacientes/${id}/avaliacoes/${a.id}/editar`}>Editar</Link>
+                    </Button>
+                  </div>
                   <p className="text-muted-foreground">
                     SpO₂: {a.spo2 ?? '—'} · Borg: {a.borg ?? '—'} · FR: {a.respiratory_rate ?? '—'} ·
                     FC: {a.heart_rate ?? '—'} · MRC: {a.mrc_scale ?? '—'} · TC6:{' '}
@@ -278,6 +290,9 @@ export default async function PacientePage({
       label: 'Pagamentos',
       content: (
         <div className="space-y-2">
+          <Button asChild size="sm">
+            <Link href={`/financeiro/pagamentos/novo?patient_id=${id}`}>+ Novo pagamento</Link>
+          </Button>
           {patientPayments.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>
           ) : (
@@ -333,7 +348,10 @@ export default async function PacientePage({
               <Card key={log.id}>
                 <CardContent className="p-4 text-sm">
                   <p className="font-medium">
-                    {log.entity_type} · {log.action} ·{' '}
+                    {({'patient':'Paciente','session':'Sessão','assessment':'Avaliação','goal':'Meta','clinical_file':'Ficha Clínica','appointment':'Agendamento','payment':'Pagamento','financial_close':'Fechamento','report':'Relatório'} as Record<string,string>)[log.entity_type] ?? log.entity_type}
+                    {' · '}
+                    {({'create':'Criação','update':'Atualização','delete':'Exclusão','finalize':'Finalização','reopen':'Reabertura','send':'Envio'} as Record<string,string>)[log.action] ?? log.action}
+                    {' · '}
                     {log.created_at ? (() => { try { return format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) } catch { return '—' } })() : '—'}
                   </p>
                   {log.justification && (
