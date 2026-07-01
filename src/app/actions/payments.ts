@@ -138,6 +138,7 @@ export async function markAsPaid(id: string): Promise<ActionResult<void>> {
               ${JSON.stringify(current)}, ${JSON.stringify({ status: 'paid' })})
     `
     revalidatePath('/financeiro')
+    revalidatePath('/dashboard')
     return { success: true, data: undefined }
   } catch (err) {
     console.error('markAsPaid error:', err)

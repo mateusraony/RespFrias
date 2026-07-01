@@ -24,7 +24,9 @@ export default async function FinanceiroPage({
   ])
 
   const totalExpected = payments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
-  const totalReceived = payments.reduce((sum, p) => sum + Number(p.amount_paid ?? 0), 0)
+  const totalReceived = payments
+    .filter((p) => p.status === 'paid' || p.status === 'partial')
+    .reduce((sum, p) => sum + Number(p.amount_paid ?? p.amount ?? 0), 0)
 
   return (
     <div className="space-y-4">
