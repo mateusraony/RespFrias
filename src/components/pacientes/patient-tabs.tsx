@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface PatientTab {
@@ -9,17 +9,15 @@ export interface PatientTab {
   content: React.ReactNode
 }
 
-export function PatientTabs({ tabs }: { tabs: PatientTab[] }) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const activeKey = searchParams.get('tab') ?? tabs[0]?.key
-  const activeTab = tabs.find((t) => t.key === activeKey) ?? tabs[0]
-
-  function goTo(key: string) {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', key)
-    router.replace(`?${params.toString()}`, { scroll: false })
-  }
+export function PatientTabs({
+  tabs,
+  defaultTab,
+}: {
+  tabs: PatientTab[]
+  defaultTab?: string
+}) {
+  const [active, setActive] = useState(defaultTab ?? tabs[0]?.key)
+  const activeTab = tabs.find((t) => t.key === active) ?? tabs[0]
 
   return (
     <div>
@@ -28,7 +26,7 @@ export function PatientTabs({ tabs }: { tabs: PatientTab[] }) {
           <button
             key={tab.key}
             type="button"
-            onClick={() => goTo(tab.key)}
+            onClick={() => setActive(tab.key)}
             className={cn(
               'shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
               activeTab?.key === tab.key

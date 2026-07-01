@@ -32,10 +32,13 @@ function safeDate(val: unknown): string {
 
 export default async function PacientePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { id } = await params
+  const { tab } = await searchParams
   const patient = await getPatient(id)
   if (!patient) notFound()
 
@@ -375,7 +378,7 @@ export default async function PacientePage({
         </div>
         <DeletePatientButton patientId={id} />
       </div>
-      <PatientTabs tabs={tabs} />
+      <PatientTabs tabs={tabs} defaultTab={tab} />
     </div>
   )
 }
