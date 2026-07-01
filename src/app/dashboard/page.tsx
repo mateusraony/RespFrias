@@ -87,17 +87,13 @@ async function getDashboardData(): Promise<DashboardData> {
     getAppointmentsByRange(gridStart, gridEnd),
   ])
 
-  function ok<T>(r: PromiseSettledResult<T>, fallback: T): T {
-    return r.status === 'fulfilled' ? r.value : fallback
-  }
-
-  const patientRows = ok(settled[0], [])
-  const todayRows = ok(settled[1], [])
-  const pendingRows = ok(settled[2], [])
-  const reportsRows = ok(settled[3], [])
-  const financialRows = ok(settled[4], [])
-  const alerts = ok(settled[5], [] as Awaited<ReturnType<typeof generateAlerts>>)
-  const monthAppointments = ok(settled[6], [] as AppointmentWithPatient[])
+  const patientRows = settled[0].status === 'fulfilled' ? settled[0].value : []
+  const todayRows = settled[1].status === 'fulfilled' ? settled[1].value : []
+  const pendingRows = settled[2].status === 'fulfilled' ? settled[2].value : []
+  const reportsRows = settled[3].status === 'fulfilled' ? settled[3].value : []
+  const financialRows = settled[4].status === 'fulfilled' ? settled[4].value : []
+  const alerts: Awaited<ReturnType<typeof generateAlerts>> = settled[5].status === 'fulfilled' ? settled[5].value : []
+  const monthAppointments: AppointmentWithPatient[] = settled[6].status === 'fulfilled' ? settled[6].value : []
 
   const todayAppointments = (todayRows as unknown as { id: string; time: string; status: string; patient_id: string; patient_name: string }[]).map((r) => ({
     id: r.id,
