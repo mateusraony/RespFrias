@@ -59,7 +59,7 @@ export function SessionForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="duration_minutes">Duração (min)</Label>
-          <Input id="duration_minutes" name="duration_minutes" type="number" />
+          <Input id="duration_minutes" name="duration_minutes" type="number" min="1" max="480" />
         </div>
       </div>
 

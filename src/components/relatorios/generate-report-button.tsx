@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { FileText } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { generateReport } from '@/app/actions/reports'
 
@@ -12,7 +13,9 @@ export function GenerateReportButton({ patientId }: { patientId: string }) {
     startTransition(async () => {
       const result = await generateReport(patientId)
       if (!result.success) {
-        alert(result.error)
+        toast.error(result.error)
+      } else {
+        toast.success('Relatório gerado com sucesso.')
       }
     })
   }
