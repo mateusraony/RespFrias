@@ -20,7 +20,12 @@ import { getGoals } from '@/app/actions/goals'
 import { getAuditLogs } from '@/app/actions/audit'
 import { getAppointmentsByPatient } from '@/app/actions/appointments'
 import { getPaymentsByPatient } from '@/app/actions/payments'
+import { getReports } from '@/app/actions/reports'
 import { PaymentStatusBadge } from '@/components/financeiro/payment-status-badge'
+import { GenerateReportButton } from '@/components/relatorios/generate-report-button'
+import { ApproveReportButton } from '@/components/relatorios/approve-report-button'
+import { DeleteReportButton } from '@/components/relatorios/delete-report-button'
+import { AssessmentCharts } from '@/components/relatorios/assessment-charts'
 
 function safeDate(val: unknown): string {
   if (!val) return '—'
@@ -42,7 +47,7 @@ export default async function PacientePage({
   const patient = await getPatient(id)
   if (!patient) notFound()
 
-  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments, patientPayments] =
+  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments, patientPayments, reports] =
     await Promise.all([
       getClinicalFile(id),
       getAssessments(id),
@@ -51,6 +56,7 @@ export default async function PacientePage({
       getAuditLogs(id),
       getAppointmentsByPatient(id),
       getPaymentsByPatient(id),
+      getReports(id),
     ])
 
   const activeGoals = goals.filter((g) => g.status === 'active')
@@ -327,7 +333,64 @@ export default async function PacientePage({
     {
       key: 'relatorios',
       label: 'Relatórios',
-      content: <PlaceholderTab text="Relatórios serão implementados na Fase 4." />,
+      content: (
+        <div className="space-y-4">
+          {/* Gráficos de evolução */}
+          {assessments.length >= 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Evolução nas Avaliações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AssessmentCharts assessments={assessments} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Relatórios gerados */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base">Relatórios</CardTitle>
+              <GenerateReportButton patientId={id} />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {reports.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum relatório gerado. Clique em &quot;Gerar relatório&quot; para criar o primeiro.
+                </p>
+              ) : (
+                reports.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{r.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {safeDate(r.created_at)}
+                        {r.approved_at && ` · Aprovado em ${safeDate(r.approved_at)}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant={r.status === 'approved' ? 'success' : 'secondary'}>
+                        {r.status === 'approved' ? 'Aprovado' : 'Rascunho'}
+                      </Badge>
+                      {r.status === 'draft' && (
+                        <ApproveReportButton reportId={r.id} patientId={id} />
+                      )}
+                      {r.status === 'approved' && (
+                        <Button asChild variant="outline" size="sm">
+                          <a href={`/api/reports/${r.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                            Baixar PDF
+                          </a>
+                        </Button>
+                      )}
+                      <DeleteReportButton reportId={r.id} patientId={id} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ),
     },
     {
       key: 'anexos',

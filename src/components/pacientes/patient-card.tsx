@@ -1,8 +1,22 @@
+'use client'
+
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import type { Patient } from '@/types'
+
+function PhoneLink({ phone }: { phone: string }) {
+  return (
+    <a
+      href={`tel:${phone}`}
+      className="text-xs text-[#0d7ea8] hover:underline"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {phone}
+    </a>
+  )
+}
 
 function initials(name: string) {
   return name
@@ -37,13 +51,7 @@ export function PatientCard({ patient }: { patient: Patient }) {
               {patient.diagnosis || 'Sem diagnóstico registrado'}
             </p>
             {patient.phone && (
-              <a
-                href={`tel:${patient.phone}`}
-                className="text-xs text-[#0d7ea8] hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {patient.phone}
-              </a>
+              <PhoneLink phone={patient.phone} />
             )}
           </div>
         </CardContent>
