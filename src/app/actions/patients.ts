@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import sql from '@/lib/db/client'
+import { PATIENT_COLORS } from '@/lib/patient-colors'
 import type { ActionResult, Patient } from '@/types'
 
 const patientSchema = z.object({
@@ -13,6 +14,7 @@ const patientSchema = z.object({
   birth_date: z.string().optional(),
   diagnosis: z.string().optional(),
   notes: z.string().optional(),
+  color: z.string().optional(),
 })
 
 export async function createPatient(formData: FormData): Promise<ActionResult<{ id: string }>> {
@@ -20,10 +22,19 @@ export async function createPatient(formData: FormData): Promise<ActionResult<{ 
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
   try {
-    const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
+    const { name, email, phone, birth_date, diagnosis, notes, color } = parsed.data
+
+    // Auto-assign color based on patient count if not provided
+    let assignedColor = color
+    if (!assignedColor) {
+      const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM patients WHERE deleted_at IS NULL`
+      assignedColor = PATIENT_COLORS[(count as number) % PATIENT_COLORS.length]
+    }
+
     const rows = await sql`
-      INSERT INTO patients (name, email, phone, birth_date, diagnosis, notes)
-      VALUES (${name}, ${email || null}, ${phone ?? null}, ${birth_date ?? null}, ${diagnosis ?? null}, ${notes ?? null})
+      INSERT INTO patients (name, email, phone, birth_date, diagnosis, notes, color)
+      VALUES (${name}, ${email || null}, ${phone ?? null}, ${birth_date ?? null},
+              ${diagnosis ?? null}, ${notes ?? null}, ${assignedColor})
       RETURNING id
     `
     const row = rows[0]
@@ -44,11 +55,12 @@ export async function updatePatient(id: string, formData: FormData): Promise<Act
 
   try {
     const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
-    const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
+    const { name, email, phone, birth_date, diagnosis, notes, color } = parsed.data
     await sql`
       UPDATE patients
       SET name = ${name}, email = ${email || null}, phone = ${phone ?? null},
-          birth_date = ${birth_date ?? null}, diagnosis = ${diagnosis ?? null}, notes = ${notes ?? null}
+          birth_date = ${birth_date ?? null}, diagnosis = ${diagnosis ?? null},
+          notes = ${notes ?? null}, color = ${color ?? '#3B82F6'}
       WHERE id = ${id}
     `
     await sql`

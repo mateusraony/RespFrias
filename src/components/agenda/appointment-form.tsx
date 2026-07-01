@@ -35,6 +35,12 @@ export function AppointmentForm({
   const [justification, setJustification] = useState('')
   const [cancelling, setCancelling] = useState(false)
 
+  function redirectAfterSave(date?: string) {
+    const d = date ?? defaultDate
+    const params = d ? `?view=dia&data=${d}` : ''
+    router.push(`/agenda${params}`)
+  }
+
   async function handleSubmit(formData: FormData) {
     setError(null)
     setLoading(true)
@@ -47,7 +53,7 @@ export function AppointmentForm({
       setError(result.error)
       return
     }
-    router.push('/agenda')
+    redirectAfterSave(formData.get('date') as string)
   }
 
   async function handleCancel() {
@@ -60,7 +66,7 @@ export function AppointmentForm({
       setError(result.error)
       return
     }
-    router.push('/agenda')
+    redirectAfterSave(appointment.date)
   }
 
   return (

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import {
   startOfMonth,
   endOfMonth,
@@ -64,9 +65,12 @@ export function MonthView({
                   <AppointmentPill key={a.id} appointment={a} />
                 ))}
                 {dayAppointments.length > 3 && (
-                  <p className="text-[11px] text-muted-foreground">
+                  <Link
+                    href={`/agenda?view=dia&data=${dateStr}`}
+                    className="block text-[11px] text-[#0d7ea8] hover:underline"
+                  >
                     +{dayAppointments.length - 3} mais
-                  </p>
+                  </Link>
                 )}
               </div>
             </div>

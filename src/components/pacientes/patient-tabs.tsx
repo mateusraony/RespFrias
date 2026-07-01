@@ -9,9 +9,15 @@ export interface PatientTab {
   content: React.ReactNode
 }
 
-export function PatientTabs({ tabs }: { tabs: PatientTab[] }) {
-  const [active, setActive] = useState(tabs[0]?.key)
-  const activeTab = tabs.find((t) => t.key === active)
+export function PatientTabs({
+  tabs,
+  defaultTab,
+}: {
+  tabs: PatientTab[]
+  defaultTab?: string
+}) {
+  const [active, setActive] = useState(defaultTab ?? tabs[0]?.key)
+  const activeTab = tabs.find((t) => t.key === active) ?? tabs[0]
 
   return (
     <div>
@@ -23,7 +29,7 @@ export function PatientTabs({ tabs }: { tabs: PatientTab[] }) {
             onClick={() => setActive(tab.key)}
             className={cn(
               'shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
-              active === tab.key
+              activeTab?.key === tab.key
                 ? 'border-[#0d7ea8] text-[#0d7ea8]'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             )}

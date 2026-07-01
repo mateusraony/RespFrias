@@ -28,6 +28,11 @@ export async function createGoal(
     const row = rows[0]
     if (!row) return { success: false, error: 'Erro ao criar meta.' }
 
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, new_value)
+      VALUES ('goal', ${row.id as string}::uuid, ${patientId}::uuid, 'create',
+              ${JSON.stringify(parsed.data)})
+    `
     revalidatePath(`/pacientes/${patientId}`)
     return { success: true, data: { id: row.id as string } }
   } catch (err) {
@@ -42,7 +47,13 @@ export async function updateGoalStatus(
   status: 'active' | 'achieved' | 'cancelled'
 ): Promise<ActionResult<void>> {
   try {
+    const current = (await sql`SELECT * FROM goals WHERE id = ${goalId} LIMIT 1`)[0]
     await sql`UPDATE goals SET status = ${status} WHERE id = ${goalId}`
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+      VALUES ('goal', ${goalId}::uuid, ${patientId}::uuid, 'update',
+              ${JSON.stringify(current)}, ${JSON.stringify({ status })})
+    `
     revalidatePath(`/pacientes/${patientId}`)
     return { success: true, data: undefined }
   } catch (err) {

@@ -20,7 +20,9 @@ export function PatientCard({ patient }: { patient: Patient }) {
       <Card className="transition-shadow hover:shadow-md active:scale-[0.99]">
         <CardContent className="flex items-center gap-3 p-4">
           <Avatar>
-            <AvatarFallback>{initials(patient.name)}</AvatarFallback>
+            <AvatarFallback style={{ backgroundColor: patient.color ?? '#3B82F6', color: '#fff' }}>
+              {initials(patient.name)}
+            </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -34,6 +36,15 @@ export function PatientCard({ patient }: { patient: Patient }) {
             <p className="truncate text-sm text-muted-foreground">
               {patient.diagnosis || 'Sem diagnóstico registrado'}
             </p>
+            {patient.phone && (
+              <a
+                href={`tel:${patient.phone}`}
+                className="text-xs text-[#0d7ea8] hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {patient.phone}
+              </a>
+            )}
           </div>
         </CardContent>
       </Card>

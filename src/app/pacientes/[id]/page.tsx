@@ -12,6 +12,7 @@ import { ClinicalFileForm } from '@/components/pacientes/clinical-file-form'
 import { SessionCard } from '@/components/pacientes/session-card'
 import { GoalActions } from '@/components/pacientes/goal-actions'
 import { GoalForm } from '@/components/pacientes/goal-form'
+import { DeletePatientButton } from '@/components/pacientes/delete-patient-button'
 import { getPatient } from '@/app/actions/patients'
 import { getClinicalFile, getAssessments } from '@/app/actions/assessments'
 import { getSessions } from '@/app/actions/sessions'
@@ -21,12 +22,23 @@ import { getAppointmentsByPatient } from '@/app/actions/appointments'
 import { getPaymentsByPatient } from '@/app/actions/payments'
 import { PaymentStatusBadge } from '@/components/financeiro/payment-status-badge'
 
+function safeDate(val: unknown): string {
+  if (!val) return '—'
+  try {
+    const d = val instanceof Date ? val : new Date(String(val) + 'T12:00:00')
+    return format(d, 'dd/MM/yyyy', { locale: ptBR })
+  } catch { return '—' }
+}
+
 export default async function PacientePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { id } = await params
+  const { tab } = await searchParams
   const patient = await getPatient(id)
   if (!patient) notFound()
 
@@ -57,9 +69,16 @@ export default async function PacientePage({
               {sessions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma sessão registrada.</p>
               ) : (
-                sessions.slice(0, 3).map((s) => (
-                  <SessionCard key={s.id} session={s} patientId={id} />
-                ))
+                <>
+                  {sessions.slice(0, 3).map((s) => (
+                    <SessionCard key={s.id} session={s} patientId={id} />
+                  ))}
+                  {sessions.length > 3 && (
+                    <a href={`/pacientes/${id}?tab=sessoes`} className="block text-center text-sm text-[#0d7ea8] hover:underline">
+                      Ver todas as {sessions.length} sessões →
+                    </a>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -96,9 +115,7 @@ export default async function PacientePage({
             </p>
             <p>
               <span className="font-medium">Nascimento:</span>{' '}
-              {patient.birth_date
-                ? format(new Date(patient.birth_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
-                : '—'}
+              {safeDate(patient.birth_date)}
             </p>
             <p>
               <span className="font-medium">Diagnóstico:</span> {patient.diagnosis || '—'}
@@ -132,10 +149,15 @@ export default async function PacientePage({
             assessments.map((a) => (
               <Card key={a.id}>
                 <CardContent className="space-y-1 p-4 text-sm">
-                  <p className="font-medium">
-                    {format(new Date(a.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} ·{' '}
-                    {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">
+                      {safeDate(a.date)} ·{' '}
+                      {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
+                    </p>
+                    <Button asChild variant="outline" size="sm" className="shrink-0">
+                      <Link href={`/pacientes/${id}/avaliacoes/${a.id}/editar`}>Editar</Link>
+                    </Button>
+                  </div>
                   <p className="text-muted-foreground">
                     SpO₂: {a.spo2 ?? '—'} · Borg: {a.borg ?? '—'} · FR: {a.respiratory_rate ?? '—'} ·
                     FC: {a.heart_rate ?? '—'} · MRC: {a.mrc_scale ?? '—'} · TC6:{' '}
@@ -190,7 +212,7 @@ export default async function PacientePage({
                     <p className="text-sm">{g.description}</p>
                     {g.target_date && (
                       <p className="text-xs text-muted-foreground">
-                        Prazo: {format(new Date(g.target_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                        Prazo: {safeDate(g.target_date)}
                       </p>
                     )}
                   </div>
@@ -235,8 +257,7 @@ export default async function PacientePage({
                 <CardContent className="flex items-center justify-between gap-3 p-4 text-sm">
                   <div>
                     <p className="font-medium">
-                      {format(new Date(a.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} ·{' '}
-                      {a.time.slice(0, 5)}
+                      {safeDate(a.date)} · {a.time.slice(0, 5)}
                     </p>
                     {a.notes && <p className="text-muted-foreground">{a.notes}</p>}
                   </div>
@@ -272,6 +293,9 @@ export default async function PacientePage({
       label: 'Pagamentos',
       content: (
         <div className="space-y-2">
+          <Button asChild size="sm">
+            <Link href={`/financeiro/pagamentos/novo?patient_id=${id}`}>+ Novo pagamento</Link>
+          </Button>
           {patientPayments.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>
           ) : (
@@ -280,9 +304,7 @@ export default async function PacientePage({
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
                   <div>
                     <p className="font-medium">
-                      {p.due_date
-                        ? format(new Date(p.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
-                        : 'Sem vencimento'}
+                      {p.due_date ? safeDate(p.due_date) : 'Sem vencimento'}
                     </p>
                     {p.notes && <p className="text-muted-foreground">{p.notes}</p>}
                   </div>
@@ -329,8 +351,11 @@ export default async function PacientePage({
               <Card key={log.id}>
                 <CardContent className="p-4 text-sm">
                   <p className="font-medium">
-                    {log.entity_type} · {log.action} ·{' '}
-                    {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    {({'patient':'Paciente','session':'Sessão','assessment':'Avaliação','goal':'Meta','clinical_file':'Ficha Clínica','appointment':'Agendamento','payment':'Pagamento','financial_close':'Fechamento','report':'Relatório'} as Record<string,string>)[log.entity_type] ?? log.entity_type}
+                    {' · '}
+                    {({'create':'Criação','update':'Atualização','delete':'Exclusão','finalize':'Finalização','reopen':'Reabertura','send':'Envio'} as Record<string,string>)[log.action] ?? log.action}
+                    {' · '}
+                    {log.created_at ? (() => { try { return format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) } catch { return '—' } })() : '—'}
                   </p>
                   {log.justification && (
                     <p className="text-muted-foreground">Justificativa: {log.justification}</p>
@@ -351,8 +376,9 @@ export default async function PacientePage({
           <h1 className="text-xl font-semibold">{patient.name}</h1>
           {patient.is_fictitious && <Badge variant="warning">Paciente de teste</Badge>}
         </div>
+        <DeletePatientButton patientId={id} />
       </div>
-      <PatientTabs tabs={tabs} />
+      <PatientTabs tabs={tabs} defaultTab={tab} />
     </div>
   )
 }

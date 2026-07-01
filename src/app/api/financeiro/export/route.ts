@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     p.notes ?? '',
   ])
 
-  const csv = [header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\n')
+  const csv = '﻿' + [header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\n')
 
   return new NextResponse(csv, {
     headers: {
