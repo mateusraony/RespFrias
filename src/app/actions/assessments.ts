@@ -32,21 +32,26 @@ export async function createAssessment(
   const parsed = assessmentSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { assessment_type, date, spo2, borg, respiratory_rate, heart_rate, mrc_scale, six_mwt_distance, notes } = parsed.data
-  const rows = await sql`
-    INSERT INTO assessments
-      (patient_id, assessment_type, date, spo2, borg, respiratory_rate, heart_rate, mrc_scale, six_mwt_distance, notes)
-    VALUES
-      (${patientId}, ${assessment_type}, ${date}, ${spo2 ?? null}, ${borg ?? null},
-       ${respiratory_rate ?? null}, ${heart_rate ?? null}, ${mrc_scale ?? null},
-       ${six_mwt_distance ?? null}, ${notes ?? null})
-    RETURNING id
-  `
-  const row = rows[0]
-  if (!row) return { success: false, error: 'Erro ao salvar avaliação.' }
+  try {
+    const { assessment_type, date, spo2, borg, respiratory_rate, heart_rate, mrc_scale, six_mwt_distance, notes } = parsed.data
+    const rows = await sql`
+      INSERT INTO assessments
+        (patient_id, assessment_type, date, spo2, borg, respiratory_rate, heart_rate, mrc_scale, six_mwt_distance, notes)
+      VALUES
+        (${patientId}, ${assessment_type}, ${date}, ${spo2 ?? null}, ${borg ?? null},
+         ${respiratory_rate ?? null}, ${heart_rate ?? null}, ${mrc_scale ?? null},
+         ${six_mwt_distance ?? null}, ${notes ?? null})
+      RETURNING id
+    `
+    const row = rows[0]
+    if (!row) return { success: false, error: 'Erro ao salvar avaliação.' }
 
-  revalidatePath(`/pacientes/${patientId}`)
-  return { success: true, data: { id: row.id as string } }
+    revalidatePath(`/pacientes/${patientId}`)
+    return { success: true, data: { id: row.id as string } }
+  } catch (err) {
+    console.error('createAssessment error:', err)
+    return { success: false, error: 'Erro ao salvar avaliação. Verifique a conexão com o banco.' }
+  }
 }
 
 export async function getAssessments(patientId: string): Promise<Assessment[]> {
@@ -65,21 +70,25 @@ export async function saveClinicalFile(patientId: string, formData: FormData): P
   const parsed = clinicalFileSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { diagnosis_detail, history, current_medications, allergies, precautions } = parsed.data
-  await sql`
-    INSERT INTO clinical_files (patient_id, diagnosis_detail, history, current_medications, allergies, precautions)
-    VALUES (${patientId}, ${diagnosis_detail ?? null}, ${history ?? null}, ${current_medications ?? null},
-            ${allergies ?? null}, ${precautions ?? null})
-    ON CONFLICT (patient_id) DO UPDATE SET
-      diagnosis_detail = EXCLUDED.diagnosis_detail,
-      history = EXCLUDED.history,
-      current_medications = EXCLUDED.current_medications,
-      allergies = EXCLUDED.allergies,
-      precautions = EXCLUDED.precautions
-  `
-
-  revalidatePath(`/pacientes/${patientId}`)
-  return { success: true, data: undefined }
+  try {
+    const { diagnosis_detail, history, current_medications, allergies, precautions } = parsed.data
+    await sql`
+      INSERT INTO clinical_files (patient_id, diagnosis_detail, history, current_medications, allergies, precautions)
+      VALUES (${patientId}, ${diagnosis_detail ?? null}, ${history ?? null}, ${current_medications ?? null},
+              ${allergies ?? null}, ${precautions ?? null})
+      ON CONFLICT (patient_id) DO UPDATE SET
+        diagnosis_detail = EXCLUDED.diagnosis_detail,
+        history = EXCLUDED.history,
+        current_medications = EXCLUDED.current_medications,
+        allergies = EXCLUDED.allergies,
+        precautions = EXCLUDED.precautions
+    `
+    revalidatePath(`/pacientes/${patientId}`)
+    return { success: true, data: undefined }
+  } catch (err) {
+    console.error('saveClinicalFile error:', err)
+    return { success: false, error: 'Erro ao salvar ficha clínica. Verifique a conexão com o banco.' }
+  }
 }
 
 export async function getClinicalFile(patientId: string): Promise<ClinicalFile | null> {

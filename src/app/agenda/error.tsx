@@ -9,6 +9,10 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
     <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
       <p className="text-sm text-muted-foreground">Erro ao carregar a agenda. Verifique a conexão com o banco.</p>
       <Button variant="outline" onClick={reset}>Tentar novamente</Button>
+      <details className="mt-2 text-left max-w-lg w-full">
+        <summary className="text-xs text-muted-foreground cursor-pointer select-none">Detalhes técnicos</summary>
+        <pre className="mt-2 text-xs bg-muted p-3 rounded overflow-auto max-h-40 whitespace-pre-wrap break-all">{error.message}</pre>
+      </details>
     </div>
   )
 }
