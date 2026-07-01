@@ -11,6 +11,12 @@ const sql = postgres(process.env.DATABASE_URL!, {
       serialize: (x: string) => x,
       parse: (x: string) => x,
     },
+    time: {
+      to: 1083,
+      from: [1083],
+      serialize: (x: string) => x,
+      parse: (x: string) => x,
+    },
   },
 })
 
