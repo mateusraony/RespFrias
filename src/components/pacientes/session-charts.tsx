@@ -59,7 +59,7 @@ function MiniChart({
           <YAxis tick={{ fontSize: 10 }} domain={domain} unit={unit} />
           <Tooltip
             contentStyle={{ fontSize: 12 }}
-            formatter={(v: number) => [`${v}${unit}`]}
+            formatter={(v) => [`${v}${unit}`]}
           />
           <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
           {lines.map((l) => (
