@@ -172,6 +172,8 @@ function PhaseInput({ label, fieldName, value, onChange, vital, status, accentCl
       <input
         type="number"
         name={fieldName}
+        id={fieldName}
+        aria-label={`${vital.label} — ${label}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onWheel={(e) => (e.target as HTMLInputElement).blur()}
