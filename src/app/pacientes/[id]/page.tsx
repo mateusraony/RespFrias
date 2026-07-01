@@ -26,6 +26,9 @@ import { GenerateReportButton } from '@/components/relatorios/generate-report-bu
 import { ApproveReportButton } from '@/components/relatorios/approve-report-button'
 import { DeleteReportButton } from '@/components/relatorios/delete-report-button'
 import { AssessmentChartsWrapper } from '@/components/relatorios/assessment-charts-wrapper'
+import { SessionChartsWrapper } from '@/components/pacientes/session-charts-wrapper'
+import { PackageWidget } from '@/components/pacientes/package-widget'
+import { getActivePackage } from '@/app/actions/packages'
 
 function safeDate(val: unknown): string {
   if (!val) return '—'
@@ -47,7 +50,7 @@ export default async function PacientePage({
   const patient = await getPatient(id)
   if (!patient) notFound()
 
-  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments, patientPayments, reports] =
+  const [clinicalFile, assessments, sessions, goals, auditLogs, patientAppointments, patientPayments, reports, activePackage] =
     await Promise.all([
       getClinicalFile(id),
       getAssessments(id),
@@ -57,6 +60,7 @@ export default async function PacientePage({
       getAppointmentsByPatient(id),
       getPaymentsByPatient(id),
       getReports(id),
+      getActivePackage(id),
     ])
 
   const activeGoals = goals.filter((g) => g.status === 'active')
@@ -160,9 +164,14 @@ export default async function PacientePage({
                       {safeDate(a.date)} ·{' '}
                       {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
                     </p>
-                    <Button asChild variant="outline" size="sm" className="shrink-0">
-                      <Link href={`/pacientes/${id}/avaliacoes/${a.id}/editar`}>Editar</Link>
-                    </Button>
+                    <div className="flex gap-2 shrink-0">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/pacientes/${id}/avaliacoes/${a.id}`}>Ver</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/pacientes/${id}/avaliacoes/${a.id}/editar`}>Editar</Link>
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-muted-foreground">
                     SpO₂: {a.spo2 ?? '—'} · Borg: {a.borg ?? '—'} · FR: {a.respiratory_rate ?? '—'} ·
@@ -182,6 +191,7 @@ export default async function PacientePage({
       label: 'Sessões',
       content: (
         <div className="space-y-3">
+          <PackageWidget patientId={id} pkg={activePackage} />
           <div className="flex gap-2">
             <Button asChild>
               <Link href={`/pacientes/${id}/sessoes/nova?tipo=quick`}>Sessão rápida</Link>
@@ -335,7 +345,19 @@ export default async function PacientePage({
       label: 'Relatórios',
       content: (
         <div className="space-y-4">
-          {/* Gráficos de evolução */}
+          {/* Gráficos de evolução das sessões */}
+          {sessions.length >= 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Evolução nas Sessões</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SessionChartsWrapper sessions={sessions.slice(0, 20)} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gráficos de avaliações */}
           {assessments.length >= 2 && (
             <Card>
               <CardHeader>

@@ -15,10 +15,12 @@ export function SessionForm({
   patientId,
   patientName,
   sessionType,
+  lastSession,
 }: {
   patientId: string
   patientName: string
   sessionType: SessionType
+  lastSession?: import('@/types').Session | null
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -61,7 +63,7 @@ export function SessionForm({
         </div>
       </div>
 
-      <VitalsFields />
+      <VitalsFields session={lastSession ?? undefined} />
 
       {sessionType === 'full' && (
         <>
