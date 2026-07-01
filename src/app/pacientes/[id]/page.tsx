@@ -25,7 +25,7 @@ import { PaymentStatusBadge } from '@/components/financeiro/payment-status-badge
 import { GenerateReportButton } from '@/components/relatorios/generate-report-button'
 import { ApproveReportButton } from '@/components/relatorios/approve-report-button'
 import { DeleteReportButton } from '@/components/relatorios/delete-report-button'
-import { AssessmentCharts } from '@/components/relatorios/assessment-charts'
+import { AssessmentChartsWrapper } from '@/components/relatorios/assessment-charts-wrapper'
 
 function safeDate(val: unknown): string {
   if (!val) return '—'
@@ -342,7 +342,7 @@ export default async function PacientePage({
                 <CardTitle className="text-base">Evolução nas Avaliações</CardTitle>
               </CardHeader>
               <CardContent>
-                <AssessmentCharts assessments={assessments} />
+                <AssessmentChartsWrapper assessments={assessments} />
               </CardContent>
             </Card>
           )}
