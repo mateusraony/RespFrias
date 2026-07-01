@@ -24,9 +24,16 @@ export function middleware(req: NextRequest) {
 
   const session = req.cookies.get('respfrias_session')
   if (!session || session.value !== process.env.APP_PASSWORD) {
+    // Return 401 JSON for API routes so fetch callers can handle it gracefully
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+    }
+    // For non-GET page requests (e.g. server actions after cookie expiry), use 303
+    // so the browser switches to GET and renders the login page correctly
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('from', pathname)
-    return NextResponse.redirect(loginUrl)
+    const status = req.method === 'GET' ? 302 : 303
+    return NextResponse.redirect(loginUrl, status)
   }
 
   return NextResponse.next()

@@ -5,6 +5,15 @@ const WINDOW_MS = 15 * 60 * 1000 // 15 minutes
 
 const attempts = new Map<string, { count: number; resetAt: number }>()
 
+// Evict expired entries to prevent unbounded memory growth
+function evictExpired() {
+  const now = Date.now()
+  for (const [ip, record] of attempts) {
+    if (now >= record.resetAt) attempts.delete(ip)
+  }
+}
+setInterval(evictExpired, 5 * 60 * 1000)
+
 function getIp(req: NextRequest): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
 }
