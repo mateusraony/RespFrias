@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createPatient, updatePatient } from '@/app/actions/patients'
+import { PATIENT_COLORS } from '@/lib/patient-colors'
 import type { Patient } from '@/types'
 
 export function PatientForm({ patient }: { patient?: Patient }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [selectedColor, setSelectedColor] = useState(patient?.color ?? PATIENT_COLORS[0])
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -71,6 +73,25 @@ export function PatientForm({ patient }: { patient?: Patient }) {
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
         <Textarea id="notes" name="notes" rows={4} defaultValue={patient?.notes} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Cor na agenda</Label>
+        <div className="flex flex-wrap gap-2">
+          {PATIENT_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedColor(c)}
+              style={{ backgroundColor: c }}
+              className={`h-7 w-7 rounded-full transition-transform hover:scale-110 ${
+                selectedColor === c ? 'ring-2 ring-offset-2 ring-foreground scale-110' : ''
+              }`}
+              title={c}
+            />
+          ))}
+        </div>
+        <input type="hidden" name="color" value={selectedColor} />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

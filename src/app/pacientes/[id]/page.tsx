@@ -21,6 +21,14 @@ import { getAppointmentsByPatient } from '@/app/actions/appointments'
 import { getPaymentsByPatient } from '@/app/actions/payments'
 import { PaymentStatusBadge } from '@/components/financeiro/payment-status-badge'
 
+function safeDate(val: unknown): string {
+  if (!val) return '—'
+  try {
+    const d = val instanceof Date ? val : new Date(String(val) + 'T12:00:00')
+    return format(d, 'dd/MM/yyyy', { locale: ptBR })
+  } catch { return '—' }
+}
+
 export default async function PacientePage({
   params,
 }: {
@@ -96,9 +104,7 @@ export default async function PacientePage({
             </p>
             <p>
               <span className="font-medium">Nascimento:</span>{' '}
-              {patient.birth_date
-                ? format(new Date(patient.birth_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
-                : '—'}
+              {safeDate(patient.birth_date)}
             </p>
             <p>
               <span className="font-medium">Diagnóstico:</span> {patient.diagnosis || '—'}
@@ -133,7 +139,7 @@ export default async function PacientePage({
               <Card key={a.id}>
                 <CardContent className="space-y-1 p-4 text-sm">
                   <p className="font-medium">
-                    {format(new Date(a.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} ·{' '}
+                    {safeDate(a.date)} ·{' '}
                     {a.assessment_type === 'initial' ? 'Inicial' : 'Periódica'}
                   </p>
                   <p className="text-muted-foreground">
@@ -190,7 +196,7 @@ export default async function PacientePage({
                     <p className="text-sm">{g.description}</p>
                     {g.target_date && (
                       <p className="text-xs text-muted-foreground">
-                        Prazo: {format(new Date(g.target_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                        Prazo: {safeDate(g.target_date)}
                       </p>
                     )}
                   </div>
@@ -235,8 +241,7 @@ export default async function PacientePage({
                 <CardContent className="flex items-center justify-between gap-3 p-4 text-sm">
                   <div>
                     <p className="font-medium">
-                      {format(new Date(a.date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} ·{' '}
-                      {a.time.slice(0, 5)}
+                      {safeDate(a.date)} · {a.time.slice(0, 5)}
                     </p>
                     {a.notes && <p className="text-muted-foreground">{a.notes}</p>}
                   </div>
@@ -280,9 +285,7 @@ export default async function PacientePage({
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
                   <div>
                     <p className="font-medium">
-                      {p.due_date
-                        ? format(new Date(p.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
-                        : 'Sem vencimento'}
+                      {p.due_date ? safeDate(p.due_date) : 'Sem vencimento'}
                     </p>
                     {p.notes && <p className="text-muted-foreground">{p.notes}</p>}
                   </div>
@@ -330,7 +333,7 @@ export default async function PacientePage({
                 <CardContent className="p-4 text-sm">
                   <p className="font-medium">
                     {log.entity_type} · {log.action} ·{' '}
-                    {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    {log.created_at ? (() => { try { return format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) } catch { return '—' } })() : '—'}
                   </p>
                   {log.justification && (
                     <p className="text-muted-foreground">Justificativa: {log.justification}</p>
