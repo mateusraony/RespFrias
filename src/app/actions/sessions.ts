@@ -128,13 +128,23 @@ export async function finalizeEvolution(sessionId: string, patientId: string): P
 }
 
 export async function getSessions(patientId: string): Promise<Session[]> {
-  const rows = await sql`
-    SELECT * FROM sessions WHERE patient_id = ${patientId} ORDER BY date DESC
-  `
-  return rows as unknown as Session[]
+  try {
+    const rows = await sql`
+      SELECT * FROM sessions WHERE patient_id = ${patientId} ORDER BY date DESC
+    `
+    return rows as unknown as Session[]
+  } catch (err) {
+    console.error('getSessions error:', err)
+    return []
+  }
 }
 
 export async function getSession(id: string): Promise<Session | null> {
-  const rows = await sql`SELECT * FROM sessions WHERE id = ${id} LIMIT 1`
-  return (rows[0] ?? null) as Session | null
+  try {
+    const rows = await sql`SELECT * FROM sessions WHERE id = ${id} LIMIT 1`
+    return (rows[0] ?? null) as Session | null
+  } catch (err) {
+    console.error('getSession error:', err)
+    return null
+  }
 }

@@ -42,10 +42,15 @@ export async function updateGoalStatus(
 }
 
 export async function getGoals(patientId: string): Promise<Goal[]> {
-  const rows = await sql`
-    SELECT * FROM goals
-    WHERE patient_id = ${patientId} AND deleted_at IS NULL
-    ORDER BY created_at DESC
-  `
-  return rows as unknown as Goal[]
+  try {
+    const rows = await sql`
+      SELECT * FROM goals
+      WHERE patient_id = ${patientId} AND deleted_at IS NULL
+      ORDER BY created_at DESC
+    `
+    return rows as unknown as Goal[]
+  } catch (err) {
+    console.error('getGoals error:', err)
+    return []
+  }
 }

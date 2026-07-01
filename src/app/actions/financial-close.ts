@@ -5,8 +5,13 @@ import sql from '@/lib/db/client'
 import type { ActionResult, FinancialClose } from '@/types'
 
 export async function getFinancialClose(periodKey: string): Promise<FinancialClose | null> {
-  const rows = await sql`SELECT * FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`
-  return (rows[0] ?? null) as FinancialClose | null
+  try {
+    const rows = await sql`SELECT * FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`
+    return (rows[0] ?? null) as FinancialClose | null
+  } catch (err) {
+    console.error('getFinancialClose error:', err)
+    return null
+  }
 }
 
 export async function closeMonth(periodKey: string): Promise<ActionResult<void>> {

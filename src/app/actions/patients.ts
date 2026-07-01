@@ -74,13 +74,23 @@ export async function softDeletePatient(id: string, justification: string): Prom
 }
 
 export async function getPatients(search?: string): Promise<Patient[]> {
-  const rows = search?.trim()
-    ? await sql`SELECT * FROM patients WHERE deleted_at IS NULL AND name ILIKE ${'%' + search + '%'} ORDER BY name`
-    : await sql`SELECT * FROM patients WHERE deleted_at IS NULL ORDER BY name`
-  return rows as unknown as Patient[]
+  try {
+    const rows = search?.trim()
+      ? await sql`SELECT * FROM patients WHERE deleted_at IS NULL AND name ILIKE ${'%' + search + '%'} ORDER BY name`
+      : await sql`SELECT * FROM patients WHERE deleted_at IS NULL ORDER BY name`
+    return rows as unknown as Patient[]
+  } catch (err) {
+    console.error('getPatients error:', err)
+    return []
+  }
 }
 
 export async function getPatient(id: string): Promise<Patient | null> {
-  const rows = await sql`SELECT * FROM patients WHERE id = ${id} AND deleted_at IS NULL LIMIT 1`
-  return (rows[0] ?? null) as Patient | null
+  try {
+    const rows = await sql`SELECT * FROM patients WHERE id = ${id} AND deleted_at IS NULL LIMIT 1`
+    return (rows[0] ?? null) as Patient | null
+  } catch (err) {
+    console.error('getPatient error:', err)
+    return null
+  }
 }

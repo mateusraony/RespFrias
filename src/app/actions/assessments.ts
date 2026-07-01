@@ -50,10 +50,15 @@ export async function createAssessment(
 }
 
 export async function getAssessments(patientId: string): Promise<Assessment[]> {
-  const rows = await sql`
-    SELECT * FROM assessments WHERE patient_id = ${patientId} ORDER BY date DESC
-  `
-  return rows as unknown as Assessment[]
+  try {
+    const rows = await sql`
+      SELECT * FROM assessments WHERE patient_id = ${patientId} ORDER BY date DESC
+    `
+    return rows as unknown as Assessment[]
+  } catch (err) {
+    console.error('getAssessments error:', err)
+    return []
+  }
 }
 
 export async function saveClinicalFile(patientId: string, formData: FormData): Promise<ActionResult<void>> {
@@ -78,6 +83,11 @@ export async function saveClinicalFile(patientId: string, formData: FormData): P
 }
 
 export async function getClinicalFile(patientId: string): Promise<ClinicalFile | null> {
-  const rows = await sql`SELECT * FROM clinical_files WHERE patient_id = ${patientId} LIMIT 1`
-  return (rows[0] ?? null) as ClinicalFile | null
+  try {
+    const rows = await sql`SELECT * FROM clinical_files WHERE patient_id = ${patientId} LIMIT 1`
+    return (rows[0] ?? null) as ClinicalFile | null
+  } catch (err) {
+    console.error('getClinicalFile error:', err)
+    return null
+  }
 }
