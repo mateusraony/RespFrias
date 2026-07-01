@@ -12,7 +12,7 @@ async function run() {
 
   const sql = postgres(url, { ssl: 'require', connect_timeout: 30 })
 
-  // Create tracking table if needed
+  // Create tracking table
   await sql`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       filename TEXT PRIMARY KEY,
@@ -24,9 +24,26 @@ async function run() {
   const allFiles = (await fs.readdir(dir)).sort()
   const files = allFiles.filter(f => f.endsWith('.sql') && !SEED_FILES.test(f))
 
-  const applied = new Set(
-    (await sql`SELECT filename FROM schema_migrations`).map(r => r.filename)
-  )
+  const appliedRows = await sql`SELECT filename FROM schema_migrations`
+  let applied = new Set(appliedRows.map(r => r.filename))
+
+  // If tracking table is empty, check whether tables already exist.
+  // If they do, backfill all known migrations as already applied.
+  if (applied.size === 0) {
+    const exists = await sql`
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'patients'
+      LIMIT 1
+    `
+    if (exists.length > 0) {
+      console.log('Existing database detected — backfilling migration history...')
+      for (const file of files) {
+        await sql`INSERT INTO schema_migrations (filename) VALUES (${file}) ON CONFLICT DO NOTHING`
+      }
+      applied = new Set(files)
+      console.log('  ✓ Backfill done.')
+    }
+  }
 
   let failed = false
   for (const file of files) {
