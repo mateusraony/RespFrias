@@ -26,20 +26,30 @@ export async function closeMonth(periodKey: string): Promise<ActionResult<void>>
     const totalExpected = payments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0)
     const totalReceived = payments.reduce((sum, p) => sum + Number(p.amount_paid ?? 0), 0)
 
-    const existing = (await sql`SELECT id FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`)[0]
-    if (existing) return { success: false, error: 'Este mês já possui um fechamento.' }
+    const existing = (await sql`SELECT * FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1`)[0]
+    // Allow closing a previously reopened month
+    if (existing && !existing.reopened_at) return { success: false, error: 'Este mês já está fechado.' }
 
-    const rows = await sql`
-      INSERT INTO financial_closes (period_key, total_expected, total_received, closed_at)
-      VALUES (${periodKey}, ${totalExpected}, ${totalReceived}, ${new Date().toISOString()})
-      RETURNING id
-    `
-    const row = rows[0]
-    if (!row) return { success: false, error: 'Erro ao fechar o mês.' }
+    const now = new Date().toISOString()
+    let rowId: string
+    if (existing) {
+      // Re-closing a reopened month
+      await sql`UPDATE financial_closes SET total_expected = ${totalExpected}, total_received = ${totalReceived}, closed_at = ${now}, reopened_at = NULL WHERE id = ${existing.id as string}`
+      rowId = existing.id as string
+    } else {
+      const rows = await sql`
+        INSERT INTO financial_closes (period_key, total_expected, total_received, closed_at)
+        VALUES (${periodKey}, ${totalExpected}, ${totalReceived}, ${now})
+        RETURNING id
+      `
+      const row = rows[0]
+      if (!row) return { success: false, error: 'Erro ao fechar o mês.' }
+      rowId = row.id as string
+    }
 
     await sql`
       INSERT INTO audit_logs (entity_type, entity_id, action, new_value)
-      VALUES ('financial_close', ${row.id as string}::uuid, 'finalize',
+      VALUES ('financial_close', ${rowId}::uuid, 'finalize',
               ${JSON.stringify({ period_key: periodKey, total_expected: totalExpected, total_received: totalReceived })})
     `
     revalidatePath('/financeiro')

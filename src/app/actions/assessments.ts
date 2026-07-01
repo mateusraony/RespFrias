@@ -59,6 +59,38 @@ export async function createAssessment(
   }
 }
 
+export async function updateAssessment(
+  assessmentId: string,
+  patientId: string,
+  formData: FormData
+): Promise<ActionResult<void>> {
+  const parsed = assessmentSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  try {
+    const current = (await sql`SELECT * FROM assessments WHERE id = ${assessmentId} LIMIT 1`)[0]
+    const { assessment_type, date, spo2, borg, respiratory_rate, heart_rate, mrc_scale, six_mwt_distance, notes } = parsed.data
+    await sql`
+      UPDATE assessments SET
+        assessment_type = ${assessment_type}, date = ${date}, spo2 = ${spo2 ?? null},
+        borg = ${borg ?? null}, respiratory_rate = ${respiratory_rate ?? null},
+        heart_rate = ${heart_rate ?? null}, mrc_scale = ${mrc_scale ?? null},
+        six_mwt_distance = ${six_mwt_distance ?? null}, notes = ${notes ?? null}
+      WHERE id = ${assessmentId}
+    `
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+      VALUES ('assessment', ${assessmentId}::uuid, ${patientId}::uuid, 'update',
+              ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
+    `
+    revalidatePath(`/pacientes/${patientId}`)
+    return { success: true, data: undefined }
+  } catch (err) {
+    console.error('updateAssessment error:', err)
+    return { success: false, error: 'Erro ao atualizar avaliação. Verifique a conexão com o banco.' }
+  }
+}
+
 export async function getAssessments(patientId: string): Promise<Assessment[]> {
   try {
     const rows = await sql`

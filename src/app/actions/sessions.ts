@@ -145,6 +145,53 @@ export async function finalizeEvolution(sessionId: string, patientId: string): P
   }
 }
 
+export async function updateSession(
+  sessionId: string,
+  patientId: string,
+  patientName: string,
+  formData: FormData
+): Promise<ActionResult<void>> {
+  const raw = { ...Object.fromEntries(formData), techniques_used: formData.getAll('techniques_used') }
+  const parsed = sessionSchema.safeParse(raw)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
+
+  try {
+    const current = (await sql`SELECT * FROM sessions WHERE id = ${sessionId} LIMIT 1`)[0]
+    if (!current) return { success: false, error: 'Sessão não encontrada.' }
+    if (current.evolution_finalized_at) return { success: false, error: 'Não é possível editar uma sessão com evolução finalizada.' }
+
+    const draft = generateDraft(patientName, parsed.data)
+    const {
+      session_type, date, duration_minutes, spo2_before, spo2_after,
+      borg_before, borg_after, respiratory_rate_before, respiratory_rate_after,
+      heart_rate_before, heart_rate_after, techniques_used, notes,
+    } = parsed.data
+
+    await sql`
+      UPDATE sessions SET
+        session_type = ${session_type}, date = ${date}, duration_minutes = ${duration_minutes ?? null},
+        spo2_before = ${spo2_before ?? null}, spo2_after = ${spo2_after ?? null},
+        borg_before = ${borg_before ?? null}, borg_after = ${borg_after ?? null},
+        respiratory_rate_before = ${respiratory_rate_before ?? null}, respiratory_rate_after = ${respiratory_rate_after ?? null},
+        heart_rate_before = ${heart_rate_before ?? null}, heart_rate_after = ${heart_rate_after ?? null},
+        techniques_used = ${techniques_used?.length ? sql`${techniques_used}` : sql`'{}'::text[]`},
+        notes = ${notes ?? null}, evolution_draft = ${draft}
+      WHERE id = ${sessionId}
+    `
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+      VALUES ('session', ${sessionId}::uuid, ${patientId}::uuid, 'update',
+              ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
+    `
+    revalidatePath(`/pacientes/${patientId}`)
+    revalidatePath(`/pacientes/${patientId}/sessoes/${sessionId}`)
+    return { success: true, data: undefined }
+  } catch (err) {
+    console.error('updateSession error:', err)
+    return { success: false, error: 'Erro ao atualizar sessão. Verifique a conexão com o banco.' }
+  }
+}
+
 export async function getSessions(patientId: string): Promise<Session[]> {
   try {
     const rows = await sql`
