@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,9 @@ export default async function PacientesPage({
         </Button>
       </div>
 
-      <PatientSearch defaultValue={busca} />
+      <Suspense fallback={<div className="h-10 rounded-md bg-muted animate-pulse" />}>
+        <PatientSearch defaultValue={busca} />
+      </Suspense>
 
       {patients.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
