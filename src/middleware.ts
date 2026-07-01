@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { deriveSessionToken } from '@/lib/session'
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout']
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const authEnabled = process.env.AUTH_ENABLED === 'true'
   if (!authEnabled) return NextResponse.next()
 
@@ -23,7 +24,9 @@ export function middleware(req: NextRequest) {
   }
 
   const session = req.cookies.get('respfrias_session')
-  if (!session || session.value !== process.env.APP_PASSWORD) {
+  const appPassword = process.env.APP_PASSWORD
+  const expectedToken = appPassword ? await deriveSessionToken(appPassword) : null
+  if (!session || !expectedToken || session.value !== expectedToken) {
     // Return 401 JSON for API routes so fetch callers can handle it gracefully
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })

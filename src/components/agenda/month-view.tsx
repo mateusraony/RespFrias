@@ -35,7 +35,8 @@ export function MonthView({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-white">
+    <div className="overflow-x-auto rounded-lg border bg-white">
+    <div className="min-w-[560px]">
       <div className="grid grid-cols-7 border-b bg-gray-50 text-center text-xs font-medium text-muted-foreground">
         {WEEKDAY_LABELS.map((d) => (
           <div key={d} className="py-2 capitalize">
@@ -77,6 +78,7 @@ export function MonthView({
           )
         })}
       </div>
+    </div>
     </div>
   )
 }

@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import {
   LayoutDashboard,
   Users,
@@ -28,16 +27,8 @@ const navItems = [
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
-export function Sidebar() {
+export function Sidebar({ alertCount = 0 }: { alertCount?: number }) {
   const pathname = usePathname()
-  const [alertCount, setAlertCount] = useState(0)
-
-  useEffect(() => {
-    fetch('/api/alerts/count')
-      .then((r) => r.json())
-      .then((d) => setAlertCount(d.count ?? 0))
-      .catch(() => {})
-  }, [pathname])
 
   return (
     <aside className="hidden lg:flex flex-col w-56 min-h-screen bg-white border-r border-gray-100 py-6">

@@ -1,11 +1,14 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { TopbarServer } from '@/components/layout/topbar-server'
 import { MobileNav } from '@/components/layout/mobile-nav'
+import { getAlertCount } from '@/app/actions/alerts'
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const alertCount = await getAlertCount().catch(() => 0)
+
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar alertCount={alertCount} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopbarServer />
         <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">{children}</main>

@@ -2,9 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
+import { safeDate } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DollarSign, Calendar, User, FileText, CreditCard } from 'lucide-react'
@@ -18,12 +17,6 @@ const statusMap = {
   agreement: { label: 'Acordo', variant: 'secondary' as const },
 }
 
-function safeDate(val: unknown): string {
-  if (!val) return '—'
-  try {
-    return format(new Date(String(val) + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })
-  } catch { return '—' }
-}
 
 function brl(val: number | undefined) {
   return (val ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
