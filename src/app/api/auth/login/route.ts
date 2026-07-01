@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { deriveSessionToken } from '@/lib/session'
 
 const MAX_ATTEMPTS = 5
 const WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -50,8 +51,9 @@ export async function POST(req: NextRequest) {
   const from = (body as { from?: string }).from ?? '/'
   const safeFrom = from.startsWith('/') && !from.startsWith('//') ? from : '/'
 
+  const sessionToken = await deriveSessionToken(appPassword)
   const res = NextResponse.json({ ok: true, redirect: safeFrom })
-  res.cookies.set('respfrias_session', appPassword, {
+  res.cookies.set('respfrias_session', sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

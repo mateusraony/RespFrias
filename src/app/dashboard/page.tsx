@@ -58,15 +58,7 @@ async function getDashboardData(): Promise<DashboardData> {
   const gridStart = fmtDate(startOfWeek(startOfMonth(now), { weekStartsOn: 0 }), 'yyyy-MM-dd')
   const gridEnd = fmtDate(endOfWeek(endOfMonth(now), { weekStartsOn: 0 }), 'yyyy-MM-dd')
 
-  const [
-    patientRows,
-    todayRows,
-    pendingRows,
-    reportsRows,
-    financialRows,
-    alerts,
-    monthAppointments,
-  ] = await Promise.all([
+  const settled = await Promise.allSettled([
     sql`SELECT COUNT(*)::int AS count FROM patients WHERE deleted_at IS NULL`,
     sql`
       SELECT a.id, a.time, a.status, a.patient_id, pt.name AS patient_name
@@ -94,6 +86,18 @@ async function getDashboardData(): Promise<DashboardData> {
     generateAlerts(),
     getAppointmentsByRange(gridStart, gridEnd),
   ])
+
+  function ok<T>(r: PromiseSettledResult<T>, fallback: T): T {
+    return r.status === 'fulfilled' ? r.value : fallback
+  }
+
+  const patientRows = ok(settled[0], [])
+  const todayRows = ok(settled[1], [])
+  const pendingRows = ok(settled[2], [])
+  const reportsRows = ok(settled[3], [])
+  const financialRows = ok(settled[4], [])
+  const alerts = ok(settled[5], [] as Awaited<ReturnType<typeof generateAlerts>>)
+  const monthAppointments = ok(settled[6], [] as AppointmentWithPatient[])
 
   const todayAppointments = (todayRows as unknown as { id: string; time: string; status: string; patient_id: string; patient_name: string }[]).map((r) => ({
     id: r.id,
@@ -169,7 +173,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {summaryCards.map((card) => {
           const Icon = card.icon
           return (

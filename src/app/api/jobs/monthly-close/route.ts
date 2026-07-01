@@ -34,26 +34,22 @@ export async function POST(req: NextRequest) {
 
     const { total_expected, total_received } = payments[0] as { total_expected: string; total_received: string }
 
-    const existing = await sql`
-      SELECT id, reopened_at FROM financial_closes WHERE period_key = ${periodKey} LIMIT 1
+    // Upsert with ON CONFLICT to prevent race conditions from concurrent cron calls.
+    // If already closed (reopened_at IS NULL), skip silently via DO NOTHING + check.
+    const upsertResult = await sql`
+      INSERT INTO financial_closes (period_key, total_expected, total_received)
+      VALUES (${periodKey}, ${total_expected}, ${total_received})
+      ON CONFLICT (period_key) DO UPDATE
+        SET total_expected = EXCLUDED.total_expected,
+            total_received = EXCLUDED.total_received,
+            closed_at = now(),
+            reopened_at = NULL
+        WHERE financial_closes.reopened_at IS NOT NULL
+      RETURNING id, reopened_at
     `
 
-    if (existing.length > 0 && !existing[0].reopened_at) {
+    if (upsertResult.length === 0) {
       return `Month ${periodKey} already closed — skipped.`
-    }
-
-    if (existing.length > 0 && existing[0].reopened_at) {
-      await sql`
-        UPDATE financial_closes
-        SET total_expected = ${total_expected}, total_received = ${total_received},
-            closed_at = now(), reopened_at = NULL
-        WHERE period_key = ${periodKey}
-      `
-    } else {
-      await sql`
-        INSERT INTO financial_closes (period_key, total_expected, total_received)
-        VALUES (${periodKey}, ${total_expected}, ${total_received})
-      `
     }
 
     const expected = Number(total_expected).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
