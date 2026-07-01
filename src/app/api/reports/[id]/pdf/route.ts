@@ -19,14 +19,24 @@ export async function GET(
     return NextResponse.json({ error: 'Relatório ainda não aprovado.' }, { status: 403 })
   }
 
-  const buffer = Buffer.from(await renderToBuffer(ReportDocument({ report, profile })))
+  try {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('PDF generation timed out')), 30_000)
+    )
+    const buffer = Buffer.from(
+      await Promise.race([renderToBuffer(ReportDocument({ report, profile })), timeout])
+    )
 
-  const filename = `relatorio-${report.content.patient.name.replace(/\s+/g, '-').toLowerCase()}.pdf`
+    const filename = `relatorio-${report.content.patient.name.replace(/\s+/g, '-').toLowerCase()}.pdf`
 
-  return new NextResponse(buffer, {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="${filename}"`,
-    },
-  })
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${filename}"`,
+      },
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro ao gerar PDF.'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }

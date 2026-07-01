@@ -4,11 +4,8 @@ import { ptBR } from 'date-fns/locale'
 import { Card, CardContent } from '@/components/ui/card'
 import { PaymentStatusBadge } from '@/components/financeiro/payment-status-badge'
 import { MarkAsPaidButton } from '@/components/financeiro/mark-as-paid-button'
+import { formatCurrency } from '@/lib/format'
 import type { PaymentWithPatient } from '@/types'
-
-function formatCurrency(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 export function PaymentRow({ payment }: { payment: PaymentWithPatient }) {
   const isPaid = payment.status === 'paid'

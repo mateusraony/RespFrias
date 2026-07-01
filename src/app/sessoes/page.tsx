@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Activity, CheckCircle, Clock } from 'lucide-react'
+import { safeDate } from '@/lib/format'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import sql from '@/lib/db/client'
@@ -41,13 +40,6 @@ async function getRecentSessions(): Promise<SessionRow[]> {
   }
 }
 
-function safeDate(val: unknown): string {
-  if (!val) return '—'
-  try {
-    const d = val instanceof Date ? val : new Date(String(val) + 'T12:00:00')
-    return format(d, 'dd/MM/yyyy', { locale: ptBR })
-  } catch { return '—' }
-}
 
 export default async function SessoesPage() {
   const sessions = await getRecentSessions()
