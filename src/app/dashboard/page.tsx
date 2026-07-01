@@ -1,4 +1,8 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import MiniCalendar from '@/components/dashboard/mini-calendar'
 import { Badge } from '@/components/ui/badge'
@@ -14,122 +18,109 @@ import {
   AlertTriangle,
   Clock,
   TrendingDown,
+  CheckCircle2,
 } from 'lucide-react'
+import sql from '@/lib/db/client'
+import { generateAlerts } from '@/app/actions/alerts'
 import type { PatientAlert } from '@/types'
 
-// Dados de exemplo — serão substituídos por dados reais do Supabase na Fase 1
-const summaryCards = [
-  {
-    title: 'Pacientes ativos',
-    value: '128',
-    change: '+12 este mês',
-    icon: Users,
-    color: 'bg-teal-500',
-    href: '/pacientes',
-  },
-  {
-    title: 'Atendimentos hoje',
-    value: '14',
-    change: 'Ver agenda →',
-    icon: Calendar,
-    color: 'bg-blue-500',
-    href: '/agenda',
-  },
-  {
-    title: 'Pagamentos pendentes',
-    value: 'R$ 4.380,00',
-    change: '8 pagamentos',
-    icon: DollarSign,
-    color: 'bg-amber-500',
-    href: '/financeiro',
-  },
-  {
-    title: 'Relatórios pendentes',
-    value: '7',
-    change: 'Ver relatórios →',
-    icon: FileText,
-    color: 'bg-purple-500',
-    href: '/relatorios',
-  },
-]
+interface DashboardData {
+  activePatients: number
+  todayCount: number
+  pendingPaymentsAmount: number
+  pendingPaymentsCount: number
+  draftReportsCount: number
+  todayAppointments: {
+    id: string
+    time: string
+    patient_name: string
+    patient_id: string
+    status: string
+    initials: string
+  }[]
+  monthPaid: number
+  monthPending: number
+  monthAgreement: number
+  alerts: PatientAlert[]
+}
 
-const todayAppointments = [
-  { time: '08:00', patient: 'Ana Paula da Silva', condition: 'Reabilitação Pulmonar', status: 'confirmed', initials: 'AP' },
-  { time: '09:00', patient: 'Carlos Eduardo Oliveira', condition: 'DPOC', status: 'confirmed', initials: 'CE' },
-  { time: '10:00', patient: 'Maria Fernanda Lima', condition: 'Asma', status: 'confirmed', initials: 'MF' },
-  { time: '11:00', patient: 'João Pedro Santos', condition: 'Fibrose Cística', status: 'confirmed', initials: 'JP' },
-  { time: '14:00', patient: 'Lucas Almeida Rocha', condition: 'Pós-COVID', status: 'pending', initials: 'LA' },
-]
+async function getDashboardData(): Promise<DashboardData> {
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const monthStart = format(new Date(), 'yyyy-MM') + '-01'
+  const [y, m] = format(new Date(), 'yyyy-MM').split('-').map(Number)
+  const monthEnd = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
 
-const patientAlerts: PatientAlert[] = [
-  {
-    patient_id: '1',
-    patient_name: 'Ana Paula da Silva',
-    reason: 'SpO₂ caiu de 95% para 91% nas últimas 2 sessões',
-    priority: 'high',
-    type: 'clinical',
-    last_appointment: '19/05/2025',
-  },
-  {
-    patient_id: '2',
-    patient_name: 'Carlos Eduardo Oliveira',
-    reason: 'Escala de Borg aumentou de 3 para 6 na última semana',
-    priority: 'medium',
-    type: 'clinical',
-    last_appointment: '18/05/2025',
-  },
-  {
-    patient_id: '3',
-    patient_name: 'Lucas Almeida Rocha',
-    reason: 'Sem reavaliação há 35 dias',
-    priority: 'low',
-    type: 'clinical',
-    last_appointment: '14/04/2025',
-  },
-  {
-    patient_id: '4',
-    patient_name: 'Maria Fernanda Lima',
-    reason: 'Pagamento em atraso — 3 sessões pendentes',
-    priority: 'medium',
-    type: 'financial',
-    last_appointment: '17/05/2025',
-  },
-]
+  const [
+    patientRows,
+    todayRows,
+    pendingRows,
+    reportsRows,
+    financialRows,
+    alerts,
+  ] = await Promise.all([
+    sql`SELECT COUNT(*)::int AS count FROM patients WHERE deleted_at IS NULL`,
+    sql`
+      SELECT a.id, a.time, a.status, a.patient_id, pt.name AS patient_name
+      FROM appointments a
+      JOIN patients pt ON pt.id = a.patient_id AND pt.deleted_at IS NULL
+      WHERE a.date = ${today} AND a.status != 'cancelled' AND a.deleted_at IS NULL
+      ORDER BY a.time
+    `,
+    sql`
+      SELECT COUNT(*)::int AS count, COALESCE(SUM(amount - COALESCE(amount_paid, 0)), 0)::numeric AS total
+      FROM payments
+      WHERE status IN ('pending', 'partial') AND due_date < CURRENT_DATE
+    `,
+    sql`SELECT COUNT(*)::int AS count FROM reports WHERE status = 'draft'`,
+    sql`
+      SELECT
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN COALESCE(amount_paid, amount) ELSE 0 END), 0)::numeric AS paid,
+        COALESCE(SUM(CASE WHEN status IN ('pending','partial') THEN amount - COALESCE(amount_paid,0) ELSE 0 END), 0)::numeric AS pending,
+        COALESCE(SUM(CASE WHEN status = 'agreement' THEN amount ELSE 0 END), 0)::numeric AS agreement
+      FROM payments
+      WHERE due_date >= ${monthStart} AND due_date < ${monthEnd}
+    `,
+    generateAlerts(),
+  ])
 
-const systemAlerts = [
-  {
-    icon: '📋',
-    title: 'Reavaliação pendente',
-    description: '5 pacientes precisam de reavaliação',
-    href: '/pacientes',
-  },
-  {
-    icon: '💰',
-    title: 'Pagamento atrasado',
-    description: '3 pagamentos em atraso',
-    href: '/financeiro',
-  },
-  {
-    icon: '📄',
-    title: 'Relatório mensal para revisar',
-    description: 'Julho/2024 está pendente de revisão',
-    href: '/relatorios',
-  },
-]
+  const todayAppointments = (todayRows as unknown as { id: string; time: string; status: string; patient_id: string; patient_name: string }[]).map((r) => ({
+    id: r.id,
+    time: r.time?.slice(0, 5) ?? '—',
+    patient_name: r.patient_name,
+    patient_id: r.patient_id,
+    status: r.status,
+    initials: r.patient_name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase(),
+  }))
+
+  const fin = (financialRows as unknown as { paid: string; pending: string; agreement: string }[])[0] ?? { paid: '0', pending: '0', agreement: '0' }
+  const pend = (pendingRows as unknown as { count: number; total: string }[])[0] ?? { count: 0, total: '0' }
+
+  return {
+    activePatients: ((patientRows as unknown as { count: number }[])[0]?.count ?? 0),
+    todayCount: todayAppointments.length,
+    pendingPaymentsAmount: parseFloat(pend.total),
+    pendingPaymentsCount: pend.count,
+    draftReportsCount: ((reportsRows as unknown as { count: number }[])[0]?.count ?? 0),
+    todayAppointments,
+    monthPaid: parseFloat(fin.paid),
+    monthPending: parseFloat(fin.pending),
+    monthAgreement: parseFloat(fin.agreement),
+    alerts: alerts.slice(0, 5),
+  }
+}
+
+function brl(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'confirmed') {
-    return <Badge variant="success">Confirmado</Badge>
-  }
+  if (status === 'confirmed') return <Badge variant="success">Confirmado</Badge>
+  if (status === 'done') return <Badge variant="secondary">Concluído</Badge>
   return <Badge variant="warning">Pendente</Badge>
 }
 
 function PriorityBadge({ priority }: { priority: PatientAlert['priority'] }) {
-  const map = {
-    high: { label: 'Alto', variant: 'destructive' as const },
-    medium: { label: 'Médio', variant: 'warning' as const },
-    low: { label: 'Baixo', variant: 'secondary' as const },
-  }
+  const map = { high: { label: 'Alto', variant: 'destructive' as const }, medium: { label: 'Médio', variant: 'warning' as const }, low: { label: 'Baixo', variant: 'secondary' as const } }
   const { label, variant } = map[priority]
   return <Badge variant={variant}>{label}</Badge>
 }
@@ -140,7 +131,28 @@ function AlertTypeIcon({ type }: { type: PatientAlert['type'] }) {
   return <AlertTriangle className="w-4 h-4 text-gray-500" />
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  let data: DashboardData
+  try {
+    data = await getDashboardData()
+  } catch {
+    data = {
+      activePatients: 0, todayCount: 0, pendingPaymentsAmount: 0, pendingPaymentsCount: 0,
+      draftReportsCount: 0, todayAppointments: [], monthPaid: 0, monthPending: 0, monthAgreement: 0, alerts: [],
+    }
+  }
+
+  const summaryCards = [
+    { title: 'Pacientes ativos', value: String(data.activePatients), change: 'Ver pacientes →', icon: Users, color: 'bg-teal-500', href: '/pacientes' },
+    { title: 'Atendimentos hoje', value: String(data.todayCount), change: 'Ver agenda →', icon: Calendar, color: 'bg-blue-500', href: '/agenda' },
+    { title: 'Pagamentos vencidos', value: brl(data.pendingPaymentsAmount), change: `${data.pendingPaymentsCount} pagamento${data.pendingPaymentsCount !== 1 ? 's' : ''}`, icon: DollarSign, color: 'bg-amber-500', href: '/financeiro' },
+    { title: 'Relatórios em rascunho', value: String(data.draftReportsCount), change: 'Ver relatórios →', icon: FileText, color: 'bg-purple-500', href: '/relatorios' },
+  ]
+
+  const total = data.monthPaid + data.monthPending
+  const paidPct = total > 0 ? Math.round((data.monthPaid / total) * 100) : 0
+  const pendPct = 100 - paidPct
+
   return (
     <div className="space-y-6">
       {/* Summary cards */}
@@ -175,27 +187,29 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Agenda de Hoje</CardTitle>
-              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">
-                Ver agenda completa
-              </a>
+              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">Ver agenda completa</a>
             </div>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
-            {todayAppointments.map((appt) => (
-              <div key={appt.time} className="flex items-center gap-3">
-                <span className="text-sm text-gray-500 w-12 shrink-0">{appt.time}</span>
-                <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="bg-gray-100 text-gray-700 text-xs font-medium">
-                    {appt.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{appt.patient}</p>
-                  <p className="text-xs text-gray-500 truncate">{appt.condition}</p>
-                </div>
-                <StatusBadge status={appt.status} />
+            {data.todayAppointments.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                <CheckCircle2 className="mx-auto mb-2 h-6 w-6 opacity-30" />
+                Nenhum atendimento hoje
               </div>
-            ))}
+            ) : (
+              data.todayAppointments.map((appt) => (
+                <Link key={appt.id} href={`/agenda/${appt.id}`} className="flex items-center gap-3 hover:bg-gray-50 rounded-md p-1 -mx-1 transition-colors">
+                  <span className="text-sm text-gray-500 w-12 shrink-0">{appt.time}</span>
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="bg-gray-100 text-gray-700 text-xs font-medium">{appt.initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{appt.patient_name}</p>
+                  </div>
+                  <StatusBadge status={appt.status} />
+                </Link>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -204,9 +218,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Calendário</CardTitle>
-              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">
-                Ver agenda
-              </a>
+              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">Ver agenda</a>
             </div>
           </CardHeader>
           <CardContent className="pt-0 px-0">
@@ -214,124 +226,127 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Alertas do sistema */}
+        {/* Alertas */}
         <Card className="border-0 shadow-sm lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Alertas</CardTitle>
-              <a href="/alertas" className="text-xs text-[#0d7ea8] hover:underline">
-                Ver todos
-              </a>
+              <a href="/alertas" className="text-xs text-[#0d7ea8] hover:underline">Ver todos</a>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            {systemAlerts.map((alert) => (
-              <a
-                key={alert.title}
-                href={alert.href}
-                className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors group"
-              >
-                <span className="text-xl shrink-0">{alert.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{alert.title}</p>
-                  <p className="text-xs text-gray-500">{alert.description}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 shrink-0" />
-              </a>
-            ))}
+          <CardContent className="pt-0 space-y-2">
+            {data.alerts.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                <CheckCircle2 className="mx-auto mb-2 h-6 w-6 opacity-30" />
+                Nenhum alerta no momento
+              </div>
+            ) : (
+              data.alerts.map((alert) => (
+                <a
+                  key={`${alert.patient_id}-${alert.type}`}
+                  href={`/pacientes/${alert.patient_id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors group"
+                >
+                  <AlertTypeIcon type={alert.type} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{alert.patient_name}</p>
+                    <p className="text-xs text-gray-500 truncate">{alert.reason}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 shrink-0" />
+                </a>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Pacientes em Alerta */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                Pacientes em Alerta
-              </CardTitle>
-              <p className="text-xs text-gray-500 mt-0.5">Pacientes que precisam de atenção agora</p>
-            </div>
-            <Link href="/pacientes?filtro=alerta" className="text-xs text-[#0d7ea8] hover:underline">
-              Ver todos
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="space-y-3">
-            {patientAlerts.map((alert) => (
-              <div
-                key={alert.patient_id}
-                className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 bg-white hover:border-gray-200 transition-colors"
-              >
-                <AlertTypeIcon type={alert.type} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-gray-900">{alert.patient_name}</span>
-                    <PriorityBadge priority={alert.priority} />
-                  </div>
-                  <p className="text-xs text-gray-600 mt-0.5">{alert.reason}</p>
-                  {alert.last_appointment && (
-                    <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Último atendimento: {alert.last_appointment}
-                    </p>
-                  )}
-                </div>
-                <Button variant="outline" size="sm" className="shrink-0 text-xs h-8" asChild>
-                  <a href={`/pacientes/${alert.patient_id}`}>Abrir prontuário</a>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Financeiro resumo */}
-      <div className="grid grid-cols-1 gap-4">
+      {/* Pacientes em Alerta (high priority only) */}
+      {data.alerts.filter((a) => a.priority === 'high').length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Financeiro do Mês</CardTitle>
-              <a href="/financeiro" className="text-xs text-[#0d7ea8] hover:underline">
-                Ver financeiro completo
-              </a>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  Pacientes com Atenção Urgente
+                </CardTitle>
+                <p className="text-xs text-gray-500 mt-0.5">Pagamentos vencidos — ação necessária</p>
+              </div>
+              <Link href="/alertas" className="text-xs text-[#0d7ea8] hover:underline">Ver todos os alertas</Link>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div>
-                <p className="text-xs text-gray-500">Recebido</p>
-                <p className="text-base font-bold text-green-600">R$ 18.650,00</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Pendente</p>
-                <p className="text-base font-bold text-amber-600">R$ 4.380,00</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Acordos</p>
-                <p className="text-base font-bold text-blue-600">R$ 2.150,00</p>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Recebido vs Pendente</span>
-                <span>81% / 19%</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                <div className="h-full bg-green-500 rounded-l-full" style={{ width: '81%' }} />
-                <div className="h-full bg-amber-400 rounded-r-full" style={{ width: '19%' }} />
-              </div>
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Recebido (81%)</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Pendente (19%)</span>
-              </div>
+            <div className="space-y-3">
+              {data.alerts.filter((a) => a.priority === 'high').map((alert) => (
+                <div key={`${alert.patient_id}-high`} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 bg-white hover:border-gray-200 transition-colors">
+                  <AlertTypeIcon type={alert.type} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-900">{alert.patient_name}</span>
+                      <PriorityBadge priority={alert.priority} />
+                    </div>
+                    <p className="text-xs text-gray-600 mt-0.5">{alert.reason}</p>
+                    {alert.last_appointment && (
+                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Último atendimento: {alert.last_appointment}
+                      </p>
+                    )}
+                  </div>
+                  <Button variant="outline" size="sm" className="shrink-0 text-xs h-8" asChild>
+                    <a href={`/pacientes/${alert.patient_id}`}>Abrir prontuário</a>
+                  </Button>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
+      )}
 
-      </div>
+      {/* Financeiro do Mês */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              Financeiro — {format(new Date(), 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase())}
+            </CardTitle>
+            <a href="/financeiro" className="text-xs text-[#0d7ea8] hover:underline">Ver financeiro completo</a>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-xs text-gray-500">Recebido</p>
+              <p className="text-base font-bold text-green-600">{brl(data.monthPaid)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Pendente</p>
+              <p className="text-base font-bold text-amber-600">{brl(data.monthPending)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Acordos</p>
+              <p className="text-base font-bold text-blue-600">{brl(data.monthAgreement)}</p>
+            </div>
+          </div>
+          {total > 0 ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Recebido vs Pendente</span>
+                <span>{paidPct}% / {pendPct}%</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                <div className="h-full bg-green-500 rounded-l-full" style={{ width: `${paidPct}%` }} />
+                <div className="h-full bg-amber-400 rounded-r-full" style={{ width: `${pendPct}%` }} />
+              </div>
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Recebido ({paidPct}%)</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Pendente ({pendPct}%)</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-2">Nenhum pagamento registrado este mês</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
