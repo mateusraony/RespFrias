@@ -17,7 +17,8 @@ export async function getFinancialClose(periodKey: string): Promise<FinancialClo
 export async function closeMonth(periodKey: string): Promise<ActionResult<void>> {
   try {
     const start = `${periodKey}-01`
-    const end = `${periodKey}-32`
+    const [y, m] = periodKey.split('-').map(Number)
+    const end = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
 
     const payments = await sql`
       SELECT amount, amount_paid FROM payments WHERE due_date >= ${start} AND due_date < ${end}

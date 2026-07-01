@@ -103,7 +103,8 @@ export async function getPaymentsByPatient(patientId: string): Promise<Payment[]
 export async function getPaymentsByMonth(periodKey: string): Promise<PaymentWithPatient[]> {
   try {
     const start = `${periodKey}-01`
-    const end = `${periodKey}-32`
+    const [y, m] = periodKey.split('-').map(Number)
+    const end = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
     const rows = await sql`
       SELECT p.*, pt.name AS patient_name
       FROM payments p

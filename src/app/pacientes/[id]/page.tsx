@@ -12,6 +12,7 @@ import { ClinicalFileForm } from '@/components/pacientes/clinical-file-form'
 import { SessionCard } from '@/components/pacientes/session-card'
 import { GoalActions } from '@/components/pacientes/goal-actions'
 import { GoalForm } from '@/components/pacientes/goal-form'
+import { DeletePatientButton } from '@/components/pacientes/delete-patient-button'
 import { getPatient } from '@/app/actions/patients'
 import { getClinicalFile, getAssessments } from '@/app/actions/assessments'
 import { getSessions } from '@/app/actions/sessions'
@@ -354,6 +355,7 @@ export default async function PacientePage({
           <h1 className="text-xl font-semibold">{patient.name}</h1>
           {patient.is_fictitious && <Badge variant="warning">Paciente de teste</Badge>}
         </div>
+        <DeletePatientButton patientId={id} />
       </div>
       <PatientTabs tabs={tabs} />
     </div>

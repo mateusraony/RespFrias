@@ -11,10 +11,10 @@ const sessionSchema = z.object({
   session_type: z.enum(['quick', 'full']),
   date: z.string().min(1, 'Data é obrigatória'),
   duration_minutes: z.coerce.number().optional(),
-  spo2_before: z.coerce.number().optional(),
-  spo2_after: z.coerce.number().optional(),
-  borg_before: z.coerce.number().optional(),
-  borg_after: z.coerce.number().optional(),
+  spo2_before: z.coerce.number().min(0).max(100).optional(),
+  spo2_after: z.coerce.number().min(0).max(100).optional(),
+  borg_before: z.coerce.number().min(0).max(10).optional(),
+  borg_after: z.coerce.number().min(0).max(10).optional(),
   respiratory_rate_before: z.coerce.number().optional(),
   respiratory_rate_after: z.coerce.number().optional(),
   heart_rate_before: z.coerce.number().optional(),
@@ -82,6 +82,11 @@ export async function createSession(
     const row = rows[0]
     if (!row) return { success: false, error: 'Erro ao salvar sessão.' }
 
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, new_value)
+      VALUES ('session', ${row.id as string}::uuid, ${patientId}::uuid, 'create',
+              ${JSON.stringify({ session_type: parsed.data.session_type, date: parsed.data.date })})
+    `
     revalidatePath(`/pacientes/${patientId}`)
     return { success: true, data: { id: row.id as string } }
   } catch (err) {

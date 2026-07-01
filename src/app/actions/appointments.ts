@@ -91,8 +91,9 @@ export async function getAppointmentsByRange(startDate: string, endDate: string)
     const rows = await sql`
       SELECT a.*, p.name AS patient_name, p.color AS patient_color
       FROM appointments a
-      LEFT JOIN patients p ON p.id = a.patient_id
+      LEFT JOIN patients p ON p.id = a.patient_id AND p.deleted_at IS NULL
       WHERE a.deleted_at IS NULL AND a.date >= ${startDate} AND a.date <= ${endDate}
+        AND p.id IS NOT NULL
       ORDER BY a.date, a.time
     `
     return rows as unknown as AppointmentWithPatient[]
