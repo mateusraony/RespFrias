@@ -28,7 +28,11 @@ export function getRange(view: AgendaView, date: Date): { start: Date; end: Date
   if (view === 'dia') return { start: startOfDay(date), end: endOfDay(date) }
   if (view === 'semana')
     return { start: startOfWeek(date, { weekStartsOn: 0 }), end: endOfWeek(date, { weekStartsOn: 0 }) }
-  return { start: startOfMonth(date), end: endOfMonth(date) }
+  // Month view: expand to full calendar grid (weeks that overlap the month boundary)
+  return {
+    start: startOfWeek(startOfMonth(date), { weekStartsOn: 0 }),
+    end: endOfWeek(endOfMonth(date), { weekStartsOn: 0 }),
+  }
 }
 
 export function shiftDate(view: AgendaView, date: Date, direction: 1 | -1): Date {
