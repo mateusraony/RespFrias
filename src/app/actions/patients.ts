@@ -33,7 +33,8 @@ export async function createPatient(formData: FormData): Promise<ActionResult<{ 
     return { success: true, data: { id: row.id as string } }
   } catch (err) {
     console.error('createPatient error:', err)
-    return { success: false, error: 'Erro ao salvar paciente. Verifique a conexão com o banco.' }
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Erro ao salvar paciente: ${msg}` }
   }
 }
 
