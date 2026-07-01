@@ -64,7 +64,7 @@ export function AppointmentForm({
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(new FormData(e.currentTarget)) }} className="space-y-4">
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
