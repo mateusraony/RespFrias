@@ -10,6 +10,7 @@ import {
   G,
 } from '@react-pdf/renderer'
 import type { Report, Assessment, Session } from '@/types'
+import type { ProfessionalProfile } from '@/app/actions/profile'
 
 const PRIMARY = '#0d7ea8'
 const GRAY = '#6b7280'
@@ -140,7 +141,7 @@ function Legend({ items }: { items: { color: string; label: string }[] }) {
   )
 }
 
-export function ReportDocument({ report }: { report: Report }) {
+export function ReportDocument({ report, profile }: { report: Report; profile?: ProfessionalProfile | null }) {
   const { patient, clinicalFile, assessments, sessions, goals, generatedAt } = report.content
 
   const sortedAssessments = [...assessments].sort((a, b) => a.date.localeCompare(b.date))
@@ -162,8 +163,18 @@ export function ReportDocument({ report }: { report: Report }) {
     ? new Date(report.approved_at).toLocaleDateString('pt-BR')
     : new Date(generatedAt).toLocaleDateString('pt-BR')
 
+  const authorName = profile?.full_name ?? 'RespFrias'
+  const footerLine = profile?.signature_line
+    || [
+        profile ? `${profile.title} ${profile.full_name}` : null,
+        profile?.crf_number,
+        profile?.specialty,
+        profile?.city,
+      ].filter(Boolean).join(' · ')
+    || 'RespFrias · Fisioterapia Respiratória · Documento confidencial'
+
   return (
-    <Document title={report.title} author="RespFrias">
+    <Document title={report.title} author={authorName}>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
@@ -236,7 +247,7 @@ export function ReportDocument({ report }: { report: Report }) {
 
         {/* Footer */}
         <Text style={styles.footer} fixed>
-          RespFrias · Fisioterapia Respiratória · Documento confidencial · {approvedAt}
+          {footerLine} · {approvedAt}
         </Text>
       </Page>
 
@@ -296,7 +307,7 @@ export function ReportDocument({ report }: { report: Report }) {
         </View>
 
         <Text style={styles.footer} fixed>
-          RespFrias · Fisioterapia Respiratória · Documento confidencial · {approvedAt}
+          {footerLine} · {approvedAt}
         </Text>
       </Page>
     </Document>

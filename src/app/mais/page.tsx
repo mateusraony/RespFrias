@@ -6,6 +6,7 @@ import {
   Settings,
   BarChart2,
   ChevronRight,
+  UserCircle,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -24,7 +25,8 @@ const sections = [
   },
   {
     items: [
-      { href: '/configuracoes', label: 'Configurações', description: 'Checklist de produção e cron jobs', icon: Settings, color: 'text-gray-500 bg-gray-100' },
+      { href: '/configuracoes', label: 'Meu Perfil & Configurações', description: 'Nome profissional, CRF, assinatura, sistema', icon: UserCircle, color: 'text-[#0d7ea8] bg-[#0d7ea8]/10' },
+      { href: '/configuracoes', label: 'Configurações do Sistema', description: 'Checklist de produção e cron jobs', icon: Settings, color: 'text-gray-500 bg-gray-100' },
     ],
   },
 ]

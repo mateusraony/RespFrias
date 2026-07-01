@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic'
 
-import { CheckCircle, XCircle, AlertCircle, Settings } from 'lucide-react'
+import { CheckCircle, XCircle, AlertCircle, Settings, User } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import sql from '@/lib/db/client'
+import { getProfile } from '@/app/actions/profile'
+import { ProfileForm } from '@/components/configuracoes/profile-form'
 
 interface CheckItem {
   label: string
@@ -90,7 +92,7 @@ async function getChecks(): Promise<CheckItem[]> {
 }
 
 export default async function ConfiguracoesPage() {
-  const checks = await getChecks()
+  const [checks, profile] = await Promise.all([getChecks(), getProfile()])
   const required = checks.filter((c) => c.required)
   const optional = checks.filter((c) => !c.required)
   const allRequiredOk = required.every((c) => c.ok)
@@ -103,6 +105,18 @@ export default async function ConfiguracoesPage() {
           {allRequiredOk ? 'Sistema OK' : 'Atenção necessária'}
         </Badge>
       </div>
+
+      {/* Perfil profissional */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <User className="h-4 w-4" /> Perfil Profissional
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProfileForm profile={profile} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

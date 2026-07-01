@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { markAsPaid } from '@/app/actions/payments'
 
@@ -13,8 +14,13 @@ export function MarkAsPaidButton({ paymentId }: { paymentId: string }) {
     e.preventDefault()
     e.stopPropagation()
     startTransition(async () => {
-      await markAsPaid(paymentId)
-      router.refresh()
+      const result = await markAsPaid(paymentId)
+      if (!result.success) {
+        toast.error('Erro ao marcar como pago.')
+      } else {
+        toast.success('Pagamento registrado com sucesso.')
+        router.refresh()
+      }
     })
   }
 
