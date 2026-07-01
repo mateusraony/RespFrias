@@ -181,6 +181,27 @@ export interface AuditLog {
   created_at: string
 }
 
+export type ReportStatus = 'draft' | 'approved'
+
+export interface Report {
+  id: string
+  patient_id: string
+  title: string
+  status: ReportStatus
+  content: ReportContent
+  created_at: string
+  approved_at?: string
+}
+
+export interface ReportContent {
+  patient: Patient
+  clinicalFile?: ClinicalFile
+  assessments: Assessment[]
+  sessions: Session[]
+  goals: Goal[]
+  generatedAt: string
+}
+
 export interface JobRun {
   id: string
   job_name: string
