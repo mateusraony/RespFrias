@@ -78,7 +78,7 @@ export async function saveClinicalFile(patientId: string, formData: FormData): P
   try {
     const { diagnosis_detail, history, current_medications, allergies, precautions } = parsed.data
     const existing = (await sql`SELECT * FROM clinical_files WHERE patient_id = ${patientId} LIMIT 1`)[0]
-    await sql`
+    const upserted = await sql`
       INSERT INTO clinical_files (patient_id, diagnosis_detail, history, current_medications, allergies, precautions)
       VALUES (${patientId}, ${diagnosis_detail ?? null}, ${history ?? null}, ${current_medications ?? null},
               ${allergies ?? null}, ${precautions ?? null})
@@ -88,10 +88,12 @@ export async function saveClinicalFile(patientId: string, formData: FormData): P
         current_medications = EXCLUDED.current_medications,
         allergies = EXCLUDED.allergies,
         precautions = EXCLUDED.precautions
+      RETURNING id
     `
+    const fileId = upserted[0]?.id as string ?? patientId
     await sql`
       INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
-      VALUES ('clinical_file', ${patientId}::uuid, ${patientId}::uuid,
+      VALUES ('clinical_file', ${fileId}::uuid, ${patientId}::uuid,
               ${existing ? 'update' : 'create'}, ${JSON.stringify(existing ?? null)}, ${JSON.stringify(parsed.data)})
     `
     revalidatePath(`/pacientes/${patientId}`)

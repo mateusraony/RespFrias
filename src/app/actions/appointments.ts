@@ -93,6 +93,7 @@ export async function getAppointmentsByRange(startDate: string, endDate: string)
       FROM appointments a
       LEFT JOIN patients p ON p.id = a.patient_id AND p.deleted_at IS NULL
       WHERE a.deleted_at IS NULL AND a.date >= ${startDate} AND a.date <= ${endDate}
+        AND p.id IS NOT NULL
       ORDER BY a.date, a.time
     `
     return rows as unknown as AppointmentWithPatient[]

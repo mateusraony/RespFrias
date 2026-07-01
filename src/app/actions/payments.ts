@@ -108,7 +108,7 @@ export async function getPaymentsByMonth(periodKey: string): Promise<PaymentWith
     const rows = await sql`
       SELECT p.*, pt.name AS patient_name
       FROM payments p
-      LEFT JOIN patients pt ON pt.id = p.patient_id AND pt.deleted_at IS NULL
+      LEFT JOIN patients pt ON pt.id = p.patient_id
       WHERE p.due_date >= ${start} AND p.due_date < ${end}
       ORDER BY p.due_date
     `
