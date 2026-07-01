@@ -5,7 +5,16 @@ import { Bell, Search, Menu, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
-export function Topbar() {
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('')
+}
+
+export function Topbar({ name = 'Fisioterapeuta', title = 'Ft.' }: { name?: string; title?: string } = {}) {
   const router = useRouter()
 
   async function handleLogout() {
@@ -60,16 +69,16 @@ export function Topbar() {
         {/* User */}
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="" alt="Dr. João Frias" />
-            <AvatarFallback className="bg-[#0d7ea8] text-white text-xs">JF</AvatarFallback>
+            <AvatarImage src="" alt={name} />
+            <AvatarFallback className="bg-[#0d7ea8] text-white text-xs">{initials(name)}</AvatarFallback>
           </Avatar>
           <div className="hidden md:block">
-            <p className="text-sm font-medium text-gray-900">Dr. João Frias</p>
-            <p className="text-xs text-gray-500">Fisioterapeuta</p>
+            <p className="text-sm font-medium text-gray-900">{name}</p>
+            <p className="text-xs text-gray-500">{title}</p>
           </div>
         </div>
 
-        {/* Logout — only shows when auth is relevant */}
+        {/* Logout */}
         <button
           onClick={handleLogout}
           className="p-2 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-700 transition-colors"
