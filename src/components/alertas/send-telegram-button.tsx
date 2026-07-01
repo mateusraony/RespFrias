@@ -6,6 +6,10 @@ import { Button } from '@/components/ui/button'
 import { sendTelegramAlert } from '@/app/actions/alerts'
 import type { PatientAlert } from '@/types'
 
+function esc(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 function buildMessage(alerts: PatientAlert[]): string {
   const lines = ['<b>🔔 RespFrias — Resumo de Alertas</b>\n']
 
@@ -15,17 +19,17 @@ function buildMessage(alerts: PatientAlert[]): string {
 
   if (high.length) {
     lines.push('<b>🔴 Alta prioridade</b>')
-    high.forEach((a) => lines.push(`• ${a.patient_name}: ${a.reason}`))
+    high.forEach((a) => lines.push(`• ${esc(a.patient_name)}: ${esc(a.reason)}`))
     lines.push('')
   }
   if (medium.length) {
     lines.push('<b>🟡 Média prioridade</b>')
-    medium.forEach((a) => lines.push(`• ${a.patient_name}: ${a.reason}`))
+    medium.forEach((a) => lines.push(`• ${esc(a.patient_name)}: ${esc(a.reason)}`))
     lines.push('')
   }
   if (low.length) {
     lines.push('<b>🟢 Baixa prioridade</b>')
-    low.forEach((a) => lines.push(`• ${a.patient_name}: ${a.reason}`))
+    low.forEach((a) => lines.push(`• ${esc(a.patient_name)}: ${esc(a.reason)}`))
   }
 
   return lines.join('\n')

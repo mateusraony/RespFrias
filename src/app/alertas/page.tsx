@@ -56,7 +56,11 @@ function AlertCard({ alert }: { alert: PatientAlert }) {
           <p className="text-sm text-muted-foreground">{alert.reason}</p>
         </div>
         <Button asChild variant="ghost" size="sm" className="shrink-0">
-          <Link href={`/pacientes/${alert.patient_id}${alert.type === 'financial' ? '?tab=pagamentos' : '?tab=sessoes'}`}>
+          <Link href={`/pacientes/${alert.patient_id}${
+            alert.type === 'financial' ? '?tab=pagamentos'
+            : alert.reason.toLowerCase().includes('avalia') ? '?tab=avaliacoes'
+            : '?tab=sessoes'
+          }`}>
             Ver
           </Link>
         </Button>
