@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard,
   Users,
@@ -23,12 +24,20 @@ const navItems = [
   { href: '/sessoes', label: 'Sessões', icon: Activity },
   { href: '/relatorios', label: 'Relatórios', icon: FileText },
   { href: '/financeiro', label: 'Financeiro', icon: DollarSign },
-  { href: '/alertas', label: 'Alertas', icon: Bell, badge: 2 },
+  { href: '/alertas', label: 'Alertas', icon: Bell, dynamicBadge: true },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [alertCount, setAlertCount] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/alerts/count')
+      .then((r) => r.json())
+      .then((d) => setAlertCount(d.count ?? 0))
+      .catch(() => {})
+  }, [pathname])
 
   return (
     <aside className="hidden lg:flex flex-col w-56 min-h-screen bg-white border-r border-gray-100 py-6">
@@ -47,6 +56,7 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon
           const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+          const badge = item.dynamicBadge ? alertCount : 0
           return (
             <Link
               key={item.href}
@@ -60,11 +70,11 @@ export function Sidebar() {
             >
               <Icon className="w-5 h-5 shrink-0" />
               <span className="flex-1">{item.label}</span>
-              {item.badge ? (
+              {badge > 0 && (
                 <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
-                  {item.badge}
+                  {badge}
                 </Badge>
-              ) : null}
+              )}
             </Link>
           )
         })}
