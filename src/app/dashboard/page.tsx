@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   Clock,
   TrendingDown,
-  TrendingUp,
 } from 'lucide-react'
 import type { PatientAlert } from '@/types'
 
@@ -200,71 +199,18 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Evolução Geral dos Pacientes */}
+        {/* Mini-calendário */}
         <Card className="border-0 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-0">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Evolução Geral dos Pacientes</CardTitle>
-                <p className="text-xs text-gray-500 mt-0.5">Média dos pacientes ativos — últimos 30 dias</p>
-              </div>
-              <select className="text-xs border border-gray-200 rounded-md px-2 py-1 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#0d7ea8]">
-                <option value="">Todos os pacientes</option>
-                <option value="1">Ana Paula da Silva</option>
-                <option value="2">Carlos Eduardo Oliveira</option>
-                <option value="3">Maria Fernanda Lima</option>
-              </select>
+              <CardTitle className="text-base">Calendário</CardTitle>
+              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">
+                Ver agenda
+              </a>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 space-y-4">
-            {/* SpO₂ */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-700">SpO₂ (%)</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-teal-600">95%</span>
-                  <span className="flex items-center text-xs text-teal-600">
-                    <TrendingUp className="w-3 h-3" /> +5%
-                  </span>
-                </div>
-              </div>
-              <div className="h-1.5 bg-gray-100 rounded-full">
-                <div className="h-1.5 bg-teal-500 rounded-full" style={{ width: '95%' }} />
-              </div>
-            </div>
-            {/* Borg */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-700">Escala de Borg (dispneia)</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-blue-600">2</span>
-                  <span className="flex items-center text-xs text-green-600">
-                    <TrendingDown className="w-3 h-3" /> -1
-                  </span>
-                </div>
-              </div>
-              <div className="h-1.5 bg-gray-100 rounded-full">
-                <div className="h-1.5 bg-blue-500 rounded-full" style={{ width: '20%' }} />
-              </div>
-            </div>
-            {/* FR */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-gray-700">Freq. Respiratória (irpm)</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-bold text-purple-600">18</span>
-                  <span className="flex items-center text-xs text-red-500">
-                    <TrendingDown className="w-3 h-3" /> -3
-                  </span>
-                </div>
-              </div>
-              <div className="h-1.5 bg-gray-100 rounded-full">
-                <div className="h-1.5 bg-purple-500 rounded-full" style={{ width: '60%' }} />
-              </div>
-            </div>
-            <p className="text-xs text-gray-400 text-center pt-2">
-              Gráficos detalhados disponíveis na Fase 1
-            </p>
+          <CardContent className="pt-0 px-0">
+            <MiniCalendar />
           </CardContent>
         </Card>
 
@@ -343,7 +289,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Financeiro resumo */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -385,20 +331,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Mini-calendário */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Calendário</CardTitle>
-              <a href="/agenda" className="text-xs text-[#0d7ea8] hover:underline">
-                Ver agenda
-              </a>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0 px-0">
-            <MiniCalendar />
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

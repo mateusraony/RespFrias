@@ -77,26 +77,41 @@ export async function updatePayment(id: string, formData: FormData): Promise<Act
 }
 
 export async function getPaymentsByPatient(patientId: string): Promise<Payment[]> {
-  const rows = await sql`
-    SELECT * FROM payments WHERE patient_id = ${patientId} ORDER BY due_date DESC
-  `
-  return rows as unknown as Payment[]
+  try {
+    const rows = await sql`
+      SELECT * FROM payments WHERE patient_id = ${patientId} ORDER BY due_date DESC
+    `
+    return rows as unknown as Payment[]
+  } catch (err) {
+    console.error('getPaymentsByPatient error:', err)
+    return []
+  }
 }
 
 export async function getPaymentsByMonth(periodKey: string): Promise<PaymentWithPatient[]> {
-  const start = `${periodKey}-01`
-  const end = `${periodKey}-32`
-  const rows = await sql`
-    SELECT p.*, pt.name AS patient_name
-    FROM payments p
-    LEFT JOIN patients pt ON pt.id = p.patient_id
-    WHERE p.due_date >= ${start} AND p.due_date < ${end}
-    ORDER BY p.due_date
-  `
-  return rows as unknown as PaymentWithPatient[]
+  try {
+    const start = `${periodKey}-01`
+    const end = `${periodKey}-32`
+    const rows = await sql`
+      SELECT p.*, pt.name AS patient_name
+      FROM payments p
+      LEFT JOIN patients pt ON pt.id = p.patient_id
+      WHERE p.due_date >= ${start} AND p.due_date < ${end}
+      ORDER BY p.due_date
+    `
+    return rows as unknown as PaymentWithPatient[]
+  } catch (err) {
+    console.error('getPaymentsByMonth error:', err)
+    return []
+  }
 }
 
 export async function getPayment(id: string): Promise<Payment | null> {
-  const rows = await sql`SELECT * FROM payments WHERE id = ${id} LIMIT 1`
-  return (rows[0] ?? null) as Payment | null
+  try {
+    const rows = await sql`SELECT * FROM payments WHERE id = ${id} LIMIT 1`
+    return (rows[0] ?? null) as Payment | null
+  } catch (err) {
+    console.error('getPayment error:', err)
+    return null
+  }
 }

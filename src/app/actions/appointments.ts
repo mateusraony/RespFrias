@@ -70,28 +70,43 @@ export async function cancelAppointment(id: string, justification: string): Prom
 }
 
 export async function getAppointmentsByRange(startDate: string, endDate: string): Promise<AppointmentWithPatient[]> {
-  const rows = await sql`
-    SELECT a.*, p.name AS patient_name
-    FROM appointments a
-    LEFT JOIN patients p ON p.id = a.patient_id
-    WHERE a.deleted_at IS NULL AND a.date >= ${startDate} AND a.date <= ${endDate}
-    ORDER BY a.date, a.time
-  `
-  return rows as unknown as AppointmentWithPatient[]
+  try {
+    const rows = await sql`
+      SELECT a.*, p.name AS patient_name
+      FROM appointments a
+      LEFT JOIN patients p ON p.id = a.patient_id
+      WHERE a.deleted_at IS NULL AND a.date >= ${startDate} AND a.date <= ${endDate}
+      ORDER BY a.date, a.time
+    `
+    return rows as unknown as AppointmentWithPatient[]
+  } catch (err) {
+    console.error('getAppointmentsByRange error:', err)
+    return []
+  }
 }
 
 export async function getAppointmentsByPatient(patientId: string): Promise<Appointment[]> {
-  const rows = await sql`
-    SELECT * FROM appointments
-    WHERE patient_id = ${patientId} AND deleted_at IS NULL
-    ORDER BY date DESC, time DESC
-  `
-  return rows as unknown as Appointment[]
+  try {
+    const rows = await sql`
+      SELECT * FROM appointments
+      WHERE patient_id = ${patientId} AND deleted_at IS NULL
+      ORDER BY date DESC, time DESC
+    `
+    return rows as unknown as Appointment[]
+  } catch (err) {
+    console.error('getAppointmentsByPatient error:', err)
+    return []
+  }
 }
 
 export async function getAppointment(id: string): Promise<Appointment | null> {
-  const rows = await sql`
-    SELECT * FROM appointments WHERE id = ${id} AND deleted_at IS NULL LIMIT 1
-  `
-  return (rows[0] ?? null) as Appointment | null
+  try {
+    const rows = await sql`
+      SELECT * FROM appointments WHERE id = ${id} AND deleted_at IS NULL LIMIT 1
+    `
+    return (rows[0] ?? null) as Appointment | null
+  } catch (err) {
+    console.error('getAppointment error:', err)
+    return null
+  }
 }
