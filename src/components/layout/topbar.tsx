@@ -1,10 +1,19 @@
 'use client'
 
-import { Bell, Search, Menu } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Bell, Search, Menu, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export function Topbar() {
+  const router = useRouter()
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
+
   const today = new Date().toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'long',
@@ -59,6 +68,16 @@ export function Topbar() {
             <p className="text-xs text-gray-500">Fisioterapeuta</p>
           </div>
         </div>
+
+        {/* Logout — only shows when auth is relevant */}
+        <button
+          onClick={handleLogout}
+          className="p-2 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-700 transition-colors"
+          aria-label="Sair"
+          title="Sair"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </header>
   )

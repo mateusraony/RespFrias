@@ -86,6 +86,31 @@ export async function generateAlerts(): Promise<PatientAlert[]> {
       }
     }
 
+    // 4. Pacientes com agendamento passado não confirmado como realizado (abandono)
+    const abandonedAppointments = await sql`
+      SELECT DISTINCT pt.id AS patient_id, pt.name AS patient_name, a.date AS appt_date
+      FROM appointments a
+      JOIN patients pt ON pt.id = a.patient_id AND pt.deleted_at IS NULL
+      WHERE a.status IN ('pending', 'confirmed')
+        AND a.date < CURRENT_DATE - INTERVAL '2 days'
+        AND a.deleted_at IS NULL
+      ORDER BY a.date DESC
+    `
+    for (const row of abandonedAppointments) {
+      const alreadyAlerted = alerts.some((a) => a.patient_id === row.patient_id)
+      if (!alreadyAlerted) {
+        const dateStr = new Date(String(row.appt_date) + 'T12:00:00').toLocaleDateString('pt-BR')
+        alerts.push({
+          patient_id: row.patient_id as string,
+          patient_name: row.patient_name as string,
+          reason: `Agendamento de ${dateStr} não confirmado como realizado — possível falta`,
+          priority: 'medium',
+          type: 'clinical',
+          last_appointment: dateStr,
+        })
+      }
+    }
+
     // Sort: high → medium → low
     const order = { high: 0, medium: 1, low: 2 }
     alerts.sort((a, b) => order[a.priority] - order[b.priority])
