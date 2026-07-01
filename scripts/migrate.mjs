@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SEED_FILES = /^0(07|09|12)_seed_/
-const ADVISORY_LOCK_ID = 1234567890 // arbitrary stable int for this app
+const ADVISORY_LOCK_ID = 1234567890
 
 async function run() {
   const url = process.env.DATABASE_URL
@@ -13,12 +13,16 @@ async function run() {
 
   const sql = postgres(url, { ssl: 'require', connect_timeout: 30, max: 1 })
 
-  // Acquire exclusive advisory lock — blocks until the other instance finishes
-  await sql`SELECT pg_advisory_lock(${ADVISORY_LOCK_ID})`
+  // Non-blocking lock: if another instance is already migrating, skip
+  const [{ pg_try_advisory_lock: locked }] = await sql`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID})`
+  if (!locked) {
+    console.log('Another instance is running migrations — skipping.')
+    await sql.end()
+    return
+  }
   console.log('Migration lock acquired.')
 
   try {
-    // Create tracking table
     await sql`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         filename TEXT PRIMARY KEY,
@@ -33,8 +37,6 @@ async function run() {
     const appliedRows = await sql`SELECT filename FROM schema_migrations`
     let applied = new Set(appliedRows.map(r => r.filename))
 
-    // If tracking table is empty, check whether tables already exist.
-    // If they do, backfill all known migrations as already applied.
     if (applied.size === 0) {
       const exists = await sql`
         SELECT 1 FROM information_schema.tables
@@ -75,4 +77,9 @@ async function run() {
   }
 }
 
-run()
+const timeout = new Promise(resolve => setTimeout(() => {
+  console.warn('Migration timeout (60s) — starting server anyway.')
+  resolve()
+}, 60_000))
+
+Promise.race([run(), timeout])
