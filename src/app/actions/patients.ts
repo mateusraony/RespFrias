@@ -19,57 +19,69 @@ export async function createPatient(formData: FormData): Promise<ActionResult<{ 
   const parsed = patientSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
-  const rows = await sql`
-    INSERT INTO patients (name, email, phone, birth_date, diagnosis, notes)
-    VALUES (${name}, ${email || null}, ${phone ?? null}, ${birth_date ?? null}, ${diagnosis ?? null}, ${notes ?? null})
-    RETURNING id
-  `
-  const row = rows[0]
-  if (!row) return { success: false, error: 'Erro ao criar paciente.' }
+  try {
+    const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
+    const rows = await sql`
+      INSERT INTO patients (name, email, phone, birth_date, diagnosis, notes)
+      VALUES (${name}, ${email || null}, ${phone ?? null}, ${birth_date ?? null}, ${diagnosis ?? null}, ${notes ?? null})
+      RETURNING id
+    `
+    const row = rows[0]
+    if (!row) return { success: false, error: 'Erro ao criar paciente.' }
 
-  revalidatePath('/pacientes')
-  return { success: true, data: { id: row.id as string } }
+    revalidatePath('/pacientes')
+    return { success: true, data: { id: row.id as string } }
+  } catch (err) {
+    console.error('createPatient error:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Erro ao salvar paciente: ${msg}` }
+  }
 }
 
 export async function updatePatient(id: string, formData: FormData): Promise<ActionResult<void>> {
   const parsed = patientSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
-
-  const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
-  await sql`
-    UPDATE patients
-    SET name = ${name}, email = ${email || null}, phone = ${phone ?? null},
-        birth_date = ${birth_date ?? null}, diagnosis = ${diagnosis ?? null}, notes = ${notes ?? null}
-    WHERE id = ${id}
-  `
-
-  await sql`
-    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
-    VALUES ('patient', ${id}::uuid, ${id}::uuid, 'update', ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
-  `
-
-  revalidatePath('/pacientes')
-  revalidatePath(`/pacientes/${id}`)
-  return { success: true, data: undefined }
+  try {
+    const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
+    const { name, email, phone, birth_date, diagnosis, notes } = parsed.data
+    await sql`
+      UPDATE patients
+      SET name = ${name}, email = ${email || null}, phone = ${phone ?? null},
+          birth_date = ${birth_date ?? null}, diagnosis = ${diagnosis ?? null}, notes = ${notes ?? null}
+      WHERE id = ${id}
+    `
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, new_value)
+      VALUES ('patient', ${id}::uuid, ${id}::uuid, 'update', ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
+    `
+    revalidatePath('/pacientes')
+    revalidatePath(`/pacientes/${id}`)
+    return { success: true, data: undefined }
+  } catch (err) {
+    console.error('updatePatient error:', err)
+    return { success: false, error: 'Erro ao atualizar paciente. Verifique a conexão com o banco.' }
+  }
 }
 
 export async function softDeletePatient(id: string, justification: string): Promise<ActionResult<void>> {
   if (!justification?.trim()) return { success: false, error: 'Justificativa é obrigatória.' }
 
-  const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
-  if (!current) return { success: false, error: 'Paciente não encontrado.' }
+  try {
+    const current = (await sql`SELECT * FROM patients WHERE id = ${id} LIMIT 1`)[0]
+    if (!current) return { success: false, error: 'Paciente não encontrado.' }
 
-  await sql`UPDATE patients SET deleted_at = now() WHERE id = ${id}`
+    await sql`UPDATE patients SET deleted_at = now() WHERE id = ${id}`
+    await sql`
+      INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, justification)
+      VALUES ('patient', ${id}::uuid, ${id}::uuid, 'delete', ${JSON.stringify(current)}, ${justification})
+    `
+    revalidatePath('/pacientes')
+  } catch (err) {
+    console.error('softDeletePatient error:', err)
+    return { success: false, error: 'Erro ao excluir paciente. Verifique a conexão com o banco.' }
+  }
 
-  await sql`
-    INSERT INTO audit_logs (entity_type, entity_id, patient_id, action, old_value, justification)
-    VALUES ('patient', ${id}::uuid, ${id}::uuid, 'delete', ${JSON.stringify(current)}, ${justification})
-  `
-
-  revalidatePath('/pacientes')
   redirect('/pacientes')
 }
 

@@ -18,17 +18,22 @@ export async function createGoal(
   const parsed = goalSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const { description, target_date, status } = parsed.data
-  const rows = await sql`
-    INSERT INTO goals (patient_id, description, target_date, status)
-    VALUES (${patientId}, ${description}, ${target_date ?? null}, ${status ?? 'active'})
-    RETURNING id
-  `
-  const row = rows[0]
-  if (!row) return { success: false, error: 'Erro ao criar meta.' }
+  try {
+    const { description, target_date, status } = parsed.data
+    const rows = await sql`
+      INSERT INTO goals (patient_id, description, target_date, status)
+      VALUES (${patientId}, ${description}, ${target_date ?? null}, ${status ?? 'active'})
+      RETURNING id
+    `
+    const row = rows[0]
+    if (!row) return { success: false, error: 'Erro ao criar meta.' }
 
-  revalidatePath(`/pacientes/${patientId}`)
-  return { success: true, data: { id: row.id as string } }
+    revalidatePath(`/pacientes/${patientId}`)
+    return { success: true, data: { id: row.id as string } }
+  } catch (err) {
+    console.error('createGoal error:', err)
+    return { success: false, error: 'Erro ao criar meta. Verifique a conexão com o banco.' }
+  }
 }
 
 export async function updateGoalStatus(
@@ -36,9 +41,14 @@ export async function updateGoalStatus(
   patientId: string,
   status: 'active' | 'achieved' | 'cancelled'
 ): Promise<ActionResult<void>> {
-  await sql`UPDATE goals SET status = ${status} WHERE id = ${goalId}`
-  revalidatePath(`/pacientes/${patientId}`)
-  return { success: true, data: undefined }
+  try {
+    await sql`UPDATE goals SET status = ${status} WHERE id = ${goalId}`
+    revalidatePath(`/pacientes/${patientId}`)
+    return { success: true, data: undefined }
+  } catch (err) {
+    console.error('updateGoalStatus error:', err)
+    return { success: false, error: 'Erro ao atualizar meta.' }
+  }
 }
 
 export async function getGoals(patientId: string): Promise<Goal[]> {
