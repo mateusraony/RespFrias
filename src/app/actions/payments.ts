@@ -109,8 +109,10 @@ export async function getPaymentsByMonth(periodKey: string): Promise<PaymentWith
       SELECT p.*, pt.name AS patient_name
       FROM payments p
       LEFT JOIN patients pt ON pt.id = p.patient_id
-      WHERE p.due_date >= ${start} AND p.due_date < ${end}
-      ORDER BY p.due_date
+      WHERE (p.due_date >= ${start} AND p.due_date < ${end})
+         OR (p.due_date IS NULL AND p.paid_at >= ${start} AND p.paid_at < ${end})
+         OR (p.due_date IS NULL AND p.created_at >= ${start} AND p.created_at < ${end})
+      ORDER BY COALESCE(p.due_date, p.paid_at::date, p.created_at::date)
     `
     return rows as unknown as PaymentWithPatient[]
   } catch (err) {

@@ -22,7 +22,9 @@ import {
 } from 'lucide-react'
 import sql from '@/lib/db/client'
 import { generateAlerts } from '@/app/actions/alerts'
-import type { PatientAlert } from '@/types'
+import { getAppointmentsByRange } from '@/app/actions/appointments'
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format as fmtDate } from 'date-fns'
+import type { PatientAlert, AppointmentWithPatient } from '@/types'
 
 interface DashboardData {
   activePatients: number
@@ -42,13 +44,19 @@ interface DashboardData {
   monthPending: number
   monthAgreement: number
   alerts: PatientAlert[]
+  monthAppointments: AppointmentWithPatient[]
 }
 
 async function getDashboardData(): Promise<DashboardData> {
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const monthStart = format(new Date(), 'yyyy-MM') + '-01'
-  const [y, m] = format(new Date(), 'yyyy-MM').split('-').map(Number)
+  const now = new Date()
+  const today = format(now, 'yyyy-MM-dd')
+  const monthStart = format(now, 'yyyy-MM') + '-01'
+  const [y, m] = format(now, 'yyyy-MM').split('-').map(Number)
   const monthEnd = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+
+  // Calendar grid range (full weeks)
+  const gridStart = fmtDate(startOfWeek(startOfMonth(now), { weekStartsOn: 0 }), 'yyyy-MM-dd')
+  const gridEnd = fmtDate(endOfWeek(endOfMonth(now), { weekStartsOn: 0 }), 'yyyy-MM-dd')
 
   const [
     patientRows,
@@ -57,6 +65,7 @@ async function getDashboardData(): Promise<DashboardData> {
     reportsRows,
     financialRows,
     alerts,
+    monthAppointments,
   ] = await Promise.all([
     sql`SELECT COUNT(*)::int AS count FROM patients WHERE deleted_at IS NULL`,
     sql`
@@ -78,9 +87,12 @@ async function getDashboardData(): Promise<DashboardData> {
         COALESCE(SUM(CASE WHEN status IN ('pending','partial') THEN amount - COALESCE(amount_paid,0) ELSE 0 END), 0)::numeric AS pending,
         COALESCE(SUM(CASE WHEN status = 'agreement' THEN amount ELSE 0 END), 0)::numeric AS agreement
       FROM payments
-      WHERE due_date >= ${monthStart} AND due_date < ${monthEnd}
+      WHERE (due_date >= ${monthStart} AND due_date < ${monthEnd})
+         OR (due_date IS NULL AND paid_at >= ${monthStart} AND paid_at < ${monthEnd})
+         OR (due_date IS NULL AND status != 'paid' AND created_at >= ${monthStart} AND created_at < ${monthEnd})
     `,
     generateAlerts(),
+    getAppointmentsByRange(gridStart, gridEnd),
   ])
 
   const todayAppointments = (todayRows as unknown as { id: string; time: string; status: string; patient_id: string; patient_name: string }[]).map((r) => ({
@@ -106,6 +118,7 @@ async function getDashboardData(): Promise<DashboardData> {
     monthPending: parseFloat(fin.pending),
     monthAgreement: parseFloat(fin.agreement),
     alerts: alerts.slice(0, 5),
+    monthAppointments,
   }
 }
 
@@ -138,7 +151,7 @@ export default async function DashboardPage() {
   } catch {
     data = {
       activePatients: 0, todayCount: 0, pendingPaymentsAmount: 0, pendingPaymentsCount: 0,
-      draftReportsCount: 0, todayAppointments: [], monthPaid: 0, monthPending: 0, monthAgreement: 0, alerts: [],
+      draftReportsCount: 0, todayAppointments: [], monthPaid: 0, monthPending: 0, monthAgreement: 0, alerts: [], monthAppointments: [],
     }
   }
 
@@ -222,7 +235,7 @@ export default async function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0 px-0">
-            <MiniCalendar />
+            <MiniCalendar appointments={data.monthAppointments} />
           </CardContent>
         </Card>
 
