@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { createAppointment, updateAppointment, cancelAppointment } from '@/app/actions/appointments'
 import { PatientCombobox } from '@/components/ui/patient-combobox'
+import { PillSelect } from '@/components/ui/pill-select'
 import type { Appointment, Patient } from '@/types'
 
 export function AppointmentForm({
@@ -36,6 +36,8 @@ export function AppointmentForm({
   const [justification, setJustification] = useState('')
   const [cancelling, setCancelling] = useState(false)
   const [duration, setDuration] = useState(appointment?.duration_minutes ?? 50)
+  const [time, setTime] = useState(appointment?.time?.slice(0, 5) ?? '')
+  const [status, setStatus] = useState(appointment?.status ?? 'pending')
 
   function redirectAfterSave(date?: string) {
     const d = date ?? defaultDate
@@ -102,7 +104,24 @@ export function AppointmentForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="time">Horário *</Label>
-          <Input id="time" name="time" type="time" defaultValue={appointment?.time?.slice(0, 5)} required disabled={loading} />
+          <Input id="time" name="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required disabled={loading} />
+          <div className="flex flex-wrap gap-1 pt-1">
+            {['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTime(t)}
+                disabled={loading}
+                className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
+                  time === t
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-accent'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="duration_minutes">Duração (min)</Label>
@@ -135,13 +154,19 @@ export function AppointmentForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="status">Status</Label>
-        <Select id="status" name="status" defaultValue={appointment?.status ?? 'pending'} disabled={loading}>
-          <option value="pending">Pendente</option>
-          <option value="confirmed">Confirmado</option>
-          <option value="done">Realizado</option>
-          <option value="cancelled">Cancelado</option>
-        </Select>
+        <Label>Status</Label>
+        <PillSelect
+          name="status"
+          options={[
+            { value: 'pending', label: 'Pendente' },
+            { value: 'confirmed', label: 'Confirmado' },
+            { value: 'done', label: 'Realizado' },
+            { value: 'cancelled', label: 'Cancelado' },
+          ]}
+          value={status}
+          onChange={setStatus}
+          disabled={loading}
+        />
       </div>
 
       <div className="space-y-1.5">
