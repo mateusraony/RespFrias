@@ -23,6 +23,16 @@ export function SessionFormEdit({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [duration, setDuration] = useState(session.duration_minutes ?? 50)
+  const [selectedTechniques, setSelectedTechniques] = useState<string[]>(
+    session.techniques_used ?? []
+  )
+
+  function toggleTechnique(t: string) {
+    setSelectedTechniques((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    )
+  }
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -47,17 +57,35 @@ export function SessionFormEdit({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="date">Data *</Label>
-          <Input
-            id="date"
-            name="date"
-            type="date"
-            defaultValue={session.date}
-            required
-          />
+          <Input id="date" name="date" type="date" defaultValue={session.date} required disabled={loading} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="duration_minutes">Duração (min)</Label>
-          <Input id="duration_minutes" name="duration_minutes" type="number" defaultValue={session.duration_minutes ?? ''} />
+          <Input
+            id="duration_minutes"
+            name="duration_minutes"
+            type="number"
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            disabled={loading}
+          />
+          <div className="flex gap-1.5 pt-1">
+            {[30, 45, 50, 60].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDuration(d)}
+                disabled={loading}
+                className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+                  duration === d
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-accent'
+                }`}
+              >
+                {d} min
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -66,18 +94,24 @@ export function SessionFormEdit({
       {session.session_type === 'full' && (
         <div className="space-y-1.5">
           <p className="text-sm font-medium">Técnicas utilizadas</p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {selectedTechniques.map((t) => (
+            <input key={t} type="hidden" name="techniques_used" value={t} />
+          ))}
+          <div className="flex flex-wrap gap-2">
             {TECHNIQUES.map((t) => (
-              <label key={t} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="techniques_used"
-                  value={t}
-                  defaultChecked={session.techniques_used?.includes(t)}
-                  className="h-4 w-4"
-                />
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleTechnique(t)}
+                disabled={loading}
+                className={`rounded-full px-3 py-1.5 text-sm border transition-colors ${
+                  selectedTechniques.includes(t)
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-accent'
+                }`}
+              >
                 {t}
-              </label>
+              </button>
             ))}
           </div>
         </div>
@@ -85,7 +119,7 @@ export function SessionFormEdit({
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} defaultValue={session.notes ?? ''} />
+        <Textarea id="notes" name="notes" rows={4} defaultValue={session.notes ?? ''} disabled={loading} />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
