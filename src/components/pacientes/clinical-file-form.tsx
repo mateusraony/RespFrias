@@ -7,6 +7,79 @@ import { Button } from '@/components/ui/button'
 import { saveClinicalFile } from '@/app/actions/assessments'
 import type { ClinicalFile } from '@/types'
 
+function TagInput({
+  id,
+  name,
+  label,
+  defaultValue,
+  placeholder,
+}: {
+  id: string
+  name: string
+  label: string
+  defaultValue?: string
+  placeholder?: string
+}) {
+  const parse = (v?: string) =>
+    v ? v.split('\n').map((s) => s.trim()).filter(Boolean) : []
+
+  const [tags, setTags] = useState<string[]>(parse(defaultValue))
+  const [input, setInput] = useState('')
+
+  function add() {
+    const trimmed = input.trim()
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags((prev) => [...prev, trimmed])
+    }
+    setInput('')
+  }
+
+  function remove(tag: string) {
+    setTags((prev) => prev.filter((t) => t !== tag))
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <input type="hidden" name={name} value={tags.join('\n')} />
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pb-1">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="flex items-center gap-1 rounded-full border border-input bg-muted px-2.5 py-0.5 text-xs"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => remove(tag)}
+                className="ml-0.5 text-muted-foreground hover:text-destructive"
+                aria-label={`Remover ${tag}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          id={id}
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder={placeholder ?? 'Digite e pressione Enter'}
+          className="flex h-9 flex-1 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        <Button type="button" variant="outline" onClick={add} className="shrink-0">
+          Adicionar
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function ClinicalFileForm({
   patientId,
   clinicalFile,
@@ -58,20 +131,21 @@ export function ClinicalFileForm({
         <Textarea id="history" name="history" rows={3} defaultValue={clinicalFile?.history} />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="current_medications">Medicações em uso</Label>
-        <Textarea
-          id="current_medications"
-          name="current_medications"
-          rows={2}
-          defaultValue={clinicalFile?.current_medications}
-        />
-      </div>
+      <TagInput
+        id="current_medications"
+        name="current_medications"
+        label="Medicações em uso"
+        defaultValue={clinicalFile?.current_medications}
+        placeholder="Ex: Salbutamol 100mcg — adicione uma por vez"
+      />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="allergies">Alergias</Label>
-        <Textarea id="allergies" name="allergies" rows={2} defaultValue={clinicalFile?.allergies} />
-      </div>
+      <TagInput
+        id="allergies"
+        name="allergies"
+        label="Alergias"
+        defaultValue={clinicalFile?.allergies}
+        placeholder="Ex: Dipirona — adicione uma por vez"
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="precautions">Precauções</Label>

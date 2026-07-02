@@ -27,6 +27,13 @@ export function PaymentForm({
   const [loading, setLoading] = useState(false)
   const [amount, setAmount] = useState<string>(payment?.amount?.toString() ?? '')
   const [status, setStatus] = useState<PaymentStatus>(payment?.status ?? 'pending')
+  const [dueDate, setDueDate] = useState<string>(payment?.due_date ?? '')
+
+  function addDays(days: number) {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    return d.toISOString().slice(0, 10)
+  }
 
   function handleAmountPaidChange(e: React.ChangeEvent<HTMLInputElement>) {
     const paid = parseFloat(e.target.value)
@@ -113,7 +120,31 @@ export function PaymentForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="due_date">Vencimento</Label>
-          <Input id="due_date" name="due_date" type="date" defaultValue={payment?.due_date} disabled={loading} />
+          <Input
+            id="due_date"
+            name="due_date"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            disabled={loading}
+          />
+          <div className="flex gap-1.5 pt-1">
+            {[
+              { label: 'Hoje', days: 0 },
+              { label: '+7 dias', days: 7 },
+              { label: '+30 dias', days: 30 },
+            ].map(({ label, days }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setDueDate(addDays(days))}
+                disabled={loading}
+                className="rounded-full px-3 py-1 text-xs border border-input bg-background hover:bg-accent transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="status">Status</Label>
