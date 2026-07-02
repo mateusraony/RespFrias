@@ -170,7 +170,7 @@ export default async function DashboardPage() {
         {summaryCards.map((card) => {
           const Icon = card.icon
           return (
-            <Card key={card.title} className="border-0 shadow-sm">
+            <Card key={card.title} className="border-0 shadow-sm transition-shadow duration-150 hover:shadow-md">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className={`${card.color} rounded-xl p-2.5 shrink-0`}>
@@ -288,7 +288,7 @@ export default async function DashboardPage() {
           <CardContent className="pt-0">
             <div className="space-y-3">
               {data.alerts.filter((a) => a.priority === 'high').map((alert) => (
-                <div key={`${alert.patient_id}-high`} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 bg-white hover:border-gray-200 transition-colors">
+                <div key={`${alert.patient_id}-high`} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 bg-white hover:border-amber-200 hover:bg-amber-50/30 transition-all duration-150">
                   <AlertTypeIcon type={alert.type} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -344,8 +344,8 @@ export default async function DashboardPage() {
                 <span>{paidPct}% / {pendPct}%</span>
               </div>
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                <div className="h-full bg-green-500 rounded-l-full" style={{ width: `${paidPct}%` }} />
-                <div className="h-full bg-amber-400 rounded-r-full" style={{ width: `${pendPct}%` }} />
+                <div className="h-full bg-green-500 rounded-l-full transition-all duration-700 ease-out" style={{ width: `${paidPct}%` }} />
+                <div className="h-full bg-amber-400 rounded-r-full transition-all duration-700 ease-out" style={{ width: `${pendPct}%` }} />
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Recebido ({paidPct}%)</span>

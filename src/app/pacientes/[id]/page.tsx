@@ -151,7 +151,7 @@ export default async function PacientePage({
             <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada.</p>
           ) : (
             assessments.map((a) => (
-              <Card key={a.id}>
+              <Card key={a.id} className="transition-shadow duration-150 hover:shadow-md">
                 <CardContent className="space-y-1 p-4 text-sm">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium">
@@ -216,7 +216,7 @@ export default async function PacientePage({
             <p className="text-sm text-muted-foreground">Nenhuma meta registrada.</p>
           ) : (
             goals.map((g) => (
-              <Card key={g.id}>
+              <Card key={g.id} className="transition-shadow duration-150 hover:shadow-md">
                 <CardContent className="flex items-center justify-between gap-3 p-4">
                   <div>
                     <p className="text-sm">{g.description}</p>
@@ -263,7 +263,7 @@ export default async function PacientePage({
             <p className="text-sm text-muted-foreground">Nenhum agendamento futuro.</p>
           ) : (
             patientAppointments.map((a) => (
-              <Card key={a.id}>
+              <Card key={a.id} className="transition-shadow duration-150 hover:shadow-md">
                 <CardContent className="flex items-center justify-between gap-3 p-4 text-sm">
                   <div>
                     <p className="font-medium">
@@ -310,7 +310,7 @@ export default async function PacientePage({
             <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>
           ) : (
             patientPayments.map((p) => (
-              <Card key={p.id}>
+              <Card key={p.id} className="transition-shadow duration-150 hover:shadow-md">
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
                   <div>
                     <p className="font-medium">
