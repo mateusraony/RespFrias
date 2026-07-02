@@ -35,17 +35,26 @@ export async function createPayment(formData: FormData): Promise<ActionResult<{ 
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
   try {
-    const { patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes } = parsed.data
+    const { patient_id, session_id, amount, status, payment_method, due_date, notes } = parsed.data
+    const resolvedStatus = status ?? 'pending'
+
+    // When saving as "paid", always fill amount_paid and paid_at
+    const amount_paid = resolvedStatus === 'paid'
+      ? (parsed.data.amount_paid ?? amount)
+      : (parsed.data.amount_paid ?? null)
+    const paid_at = resolvedStatus === 'paid' ? new Date().toISOString() : null
+
     const rows = await sql`
-      INSERT INTO payments (patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes)
-      VALUES (${patient_id}, ${session_id || null}, ${amount}, ${amount_paid ?? null},
-              ${status ?? 'pending'}, ${payment_method ?? null}, ${due_date ?? null}, ${notes ?? null})
+      INSERT INTO payments (patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes, paid_at)
+      VALUES (${patient_id}, ${session_id || null}, ${amount}, ${amount_paid},
+              ${resolvedStatus}, ${payment_method ?? null}, ${due_date ?? null}, ${notes ?? null}, ${paid_at})
       RETURNING id
     `
     const row = rows[0]
     if (!row) return { success: false, error: 'Erro ao criar pagamento.' }
 
-    revalidatePath('/financeiro')
+    revalidatePath('/financeiro', 'layout')
+    revalidatePath('/dashboard')
     return { success: true, data: { id: row.id as string } }
   } catch (err) {
     console.error('createPayment error:', err)
@@ -64,13 +73,17 @@ export async function updatePayment(id: string, formData: FormData): Promise<Act
       return { success: false, error: 'O mês deste pagamento já foi fechado. Reabra o fechamento mensal para editar.' }
     }
 
-    const { patient_id, session_id, amount, amount_paid, status, payment_method, due_date, notes } = parsed.data
-    const paidAt = status === 'paid' ? new Date().toISOString() : (current?.paid_at ?? null)
+    const { patient_id, session_id, amount, status, payment_method, due_date, notes } = parsed.data
+    const resolvedStatus = status ?? 'pending'
+    const amount_paid = resolvedStatus === 'paid'
+      ? (parsed.data.amount_paid ?? amount)
+      : (parsed.data.amount_paid ?? null)
+    const paidAt = resolvedStatus === 'paid' ? new Date().toISOString() : (current?.paid_at ?? null)
 
     await sql`
       UPDATE payments
       SET patient_id = ${patient_id}, session_id = ${session_id || null}, amount = ${amount},
-          amount_paid = ${amount_paid ?? null}, status = ${status ?? 'pending'},
+          amount_paid = ${amount_paid}, status = ${resolvedStatus},
           payment_method = ${payment_method ?? null}, due_date = ${due_date ?? null},
           notes = ${notes ?? null}, paid_at = ${paidAt as string | null}
       WHERE id = ${id}
@@ -80,7 +93,8 @@ export async function updatePayment(id: string, formData: FormData): Promise<Act
       VALUES ('payment', ${id}::uuid, ${patient_id}::uuid, 'update',
               ${JSON.stringify(current)}, ${JSON.stringify(parsed.data)})
     `
-    revalidatePath('/financeiro')
+    revalidatePath('/financeiro', 'layout')
+    revalidatePath('/dashboard')
     return { success: true, data: undefined }
   } catch (err) {
     console.error('updatePayment error:', err)

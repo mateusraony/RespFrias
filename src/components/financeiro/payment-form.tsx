@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { PatientCombobox } from '@/components/ui/patient-combobox'
 import { createPayment, updatePayment } from '@/app/actions/payments'
-import type { Patient, Payment } from '@/types'
+import type { Patient, Payment, PaymentStatus } from '@/types'
 
 export function PaymentForm({
   patients,
@@ -24,9 +25,39 @@ export function PaymentForm({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [amount, setAmount] = useState<string>(payment?.amount?.toString() ?? '')
+  const [status, setStatus] = useState<PaymentStatus>(payment?.status ?? 'pending')
+  const [dueDate, setDueDate] = useState<string>(payment?.due_date ?? '')
+
+  function addDays(days: number) {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  function handleAmountPaidChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const paid = parseFloat(e.target.value)
+    const total = parseFloat(amount)
+    if (!isNaN(paid) && !isNaN(total) && total > 0) {
+      if (paid >= total) setStatus('paid')
+      else if (paid > 0) setStatus('partial')
+      else setStatus('pending')
+    }
+  }
 
   async function handleSubmit(formData: FormData) {
     setError(null)
+
+    const totalAmount = Number(formData.get('amount') ?? 0)
+    const amountPaid = formData.get('amount_paid') ? Number(formData.get('amount_paid')) : null
+    if (amountPaid !== null && amountPaid > totalAmount) {
+      setError('Valor pago não pode ser maior que o valor total.')
+      return
+    }
+
     setLoading(true)
     const result = payment
       ? await updatePayment(payment.id, formData)
@@ -47,15 +78,14 @@ export function PaymentForm({
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="patient_id">Paciente *</Label>
-        <Select id="patient_id" name="patient_id" defaultValue={payment?.patient_id ?? defaultPatientId} required>
-          <option value="">Selecione um paciente</option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
+        <Label>Paciente *</Label>
+        <PatientCombobox
+          patients={patients}
+          defaultValue={payment?.patient_id ?? defaultPatientId}
+          name="patient_id"
+          required
+          disabled={loading}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -68,8 +98,10 @@ export function PaymentForm({
             inputMode="decimal"
             step="0.01"
             min="0.01"
-            defaultValue={payment?.amount}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             required
+            disabled={loading}
           />
         </div>
         <div className="space-y-1.5">
@@ -82,6 +114,8 @@ export function PaymentForm({
             step="0.01"
             min="0"
             defaultValue={payment?.amount_paid}
+            onChange={handleAmountPaidChange}
+            disabled={loading}
           />
         </div>
       </div>
@@ -89,11 +123,41 @@ export function PaymentForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="due_date">Vencimento</Label>
-          <Input id="due_date" name="due_date" type="date" defaultValue={payment?.due_date} />
+          <Input
+            id="due_date"
+            name="due_date"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            disabled={loading}
+          />
+          <div className="flex gap-1.5 pt-1">
+            {[
+              { label: 'Hoje', days: 0 },
+              { label: '+7 dias', days: 7 },
+              { label: '+30 dias', days: 30 },
+            ].map(({ label, days }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setDueDate(addDays(days))}
+                disabled={loading}
+                className="rounded-full px-3 py-1 text-xs border border-input bg-background hover:bg-accent transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="status">Status</Label>
-          <Select id="status" name="status" defaultValue={payment?.status ?? 'pending'}>
+          <Select
+            id="status"
+            name="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as PaymentStatus)}
+            disabled={loading}
+          >
             <option value="pending">Pendente</option>
             <option value="partial">Parcial</option>
             <option value="paid">Pago</option>
@@ -104,7 +168,7 @@ export function PaymentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="payment_method">Forma de pagamento</Label>
-        <Select id="payment_method" name="payment_method" defaultValue={payment?.payment_method ?? ''}>
+        <Select id="payment_method" name="payment_method" defaultValue={payment?.payment_method ?? ''} disabled={loading}>
           <option value="">Não informado</option>
           <option value="PIX">PIX</option>
           <option value="Dinheiro">Dinheiro</option>
@@ -117,7 +181,7 @@ export function PaymentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={3} defaultValue={payment?.notes} />
+        <Textarea id="notes" name="notes" rows={3} defaultValue={payment?.notes} disabled={loading} />
       </div>
 
       <div className="flex flex-wrap justify-end gap-2 pt-2">

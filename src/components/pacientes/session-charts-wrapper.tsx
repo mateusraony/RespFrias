@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { ChartErrorBoundary } from '@/components/ui/chart-error-boundary'
 import type { Session } from '@/types'
 
 const SessionCharts = dynamic(
@@ -9,5 +10,9 @@ const SessionCharts = dynamic(
 )
 
 export function SessionChartsWrapper({ sessions }: { sessions: Session[] }) {
-  return <SessionCharts sessions={sessions} />
+  return (
+    <ChartErrorBoundary>
+      <SessionCharts sessions={sessions} />
+    </ChartErrorBoundary>
+  )
 }

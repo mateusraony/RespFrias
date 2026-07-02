@@ -17,6 +17,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { createAppointment, updateAppointment, cancelAppointment } from '@/app/actions/appointments'
+import { PatientCombobox } from '@/components/ui/patient-combobox'
 import type { Appointment, Patient } from '@/types'
 
 export function AppointmentForm({
@@ -34,6 +35,7 @@ export function AppointmentForm({
   const [cancelOpen, setCancelOpen] = useState(false)
   const [justification, setJustification] = useState('')
   const [cancelling, setCancelling] = useState(false)
+  const [duration, setDuration] = useState(appointment?.duration_minutes ?? 50)
 
   function redirectAfterSave(date?: string) {
     const d = date ?? defaultDate
@@ -77,14 +79,13 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="patient_id">Paciente *</Label>
-        <Select id="patient_id" name="patient_id" defaultValue={appointment?.patient_id} required>
-          <option value="">Selecione um paciente</option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
+        <PatientCombobox
+          patients={patients}
+          defaultValue={appointment?.patient_id}
+          name="patient_id"
+          required
+          disabled={loading}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -96,11 +97,12 @@ export function AppointmentForm({
             type="date"
             defaultValue={appointment?.date ?? defaultDate}
             required
+            disabled={loading}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="time">Horário *</Label>
-          <Input id="time" name="time" type="time" defaultValue={appointment?.time?.slice(0, 5)} required />
+          <Input id="time" name="time" type="time" defaultValue={appointment?.time?.slice(0, 5)} required disabled={loading} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="duration_minutes">Duração (min)</Label>
@@ -108,14 +110,33 @@ export function AppointmentForm({
             id="duration_minutes"
             name="duration_minutes"
             type="number"
-            defaultValue={appointment?.duration_minutes ?? 50}
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            disabled={loading}
           />
+          <div className="flex gap-1.5 pt-1">
+            {[30, 45, 50, 60].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDuration(d)}
+                disabled={loading}
+                className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+                  duration === d
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-accent'
+                }`}
+              >
+                {d} min
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="status">Status</Label>
-        <Select id="status" name="status" defaultValue={appointment?.status ?? 'pending'}>
+        <Select id="status" name="status" defaultValue={appointment?.status ?? 'pending'} disabled={loading}>
           <option value="pending">Pendente</option>
           <option value="confirmed">Confirmado</option>
           <option value="done">Realizado</option>
@@ -125,7 +146,7 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={3} defaultValue={appointment?.notes} />
+        <Textarea id="notes" name="notes" rows={3} defaultValue={appointment?.notes} disabled={loading} />
       </div>
 
       <div className="flex flex-wrap justify-end gap-2 pt-2">

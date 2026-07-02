@@ -24,6 +24,7 @@ import sql from '@/lib/db/client'
 import { generateAlerts } from '@/app/actions/alerts'
 import { getAppointmentsByRange } from '@/app/actions/appointments'
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format as fmtDate } from 'date-fns'
+import { formatCurrency } from '@/lib/format'
 import type { PatientAlert, AppointmentWithPatient } from '@/types'
 
 interface DashboardData {
@@ -87,17 +88,13 @@ async function getDashboardData(): Promise<DashboardData> {
     getAppointmentsByRange(gridStart, gridEnd),
   ])
 
-  function ok<T>(r: PromiseSettledResult<T>, fallback: T): T {
-    return r.status === 'fulfilled' ? r.value : fallback
-  }
-
-  const patientRows = ok(settled[0], [])
-  const todayRows = ok(settled[1], [])
-  const pendingRows = ok(settled[2], [])
-  const reportsRows = ok(settled[3], [])
-  const financialRows = ok(settled[4], [])
-  const alerts = ok(settled[5], [] as Awaited<ReturnType<typeof generateAlerts>>)
-  const monthAppointments = ok(settled[6], [] as AppointmentWithPatient[])
+  const patientRows = settled[0].status === 'fulfilled' ? settled[0].value : []
+  const todayRows = settled[1].status === 'fulfilled' ? settled[1].value : []
+  const pendingRows = settled[2].status === 'fulfilled' ? settled[2].value : []
+  const reportsRows = settled[3].status === 'fulfilled' ? settled[3].value : []
+  const financialRows = settled[4].status === 'fulfilled' ? settled[4].value : []
+  const alerts: Awaited<ReturnType<typeof generateAlerts>> = settled[5].status === 'fulfilled' ? settled[5].value : []
+  const monthAppointments: AppointmentWithPatient[] = settled[6].status === 'fulfilled' ? settled[6].value : []
 
   const todayAppointments = (todayRows as unknown as { id: string; time: string; status: string; patient_id: string; patient_name: string }[]).map((r) => ({
     id: r.id,
@@ -124,10 +121,6 @@ async function getDashboardData(): Promise<DashboardData> {
     alerts: alerts.slice(0, 5),
     monthAppointments,
   }
-}
-
-function brl(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -162,7 +155,7 @@ export default async function DashboardPage() {
   const summaryCards = [
     { title: 'Pacientes ativos', value: String(data.activePatients), change: 'Ver pacientes →', icon: Users, color: 'bg-teal-500', href: '/pacientes' },
     { title: 'Atendimentos hoje', value: String(data.todayCount), change: 'Ver agenda →', icon: Calendar, color: 'bg-blue-500', href: '/agenda' },
-    { title: 'Pagamentos vencidos', value: brl(data.pendingPaymentsAmount), change: `${data.pendingPaymentsCount} pagamento${data.pendingPaymentsCount !== 1 ? 's' : ''}`, icon: DollarSign, color: 'bg-amber-500', href: '/financeiro' },
+    { title: 'Pagamentos vencidos', value: formatCurrency(data.pendingPaymentsAmount), change: `${data.pendingPaymentsCount} pagamento${data.pendingPaymentsCount !== 1 ? 's' : ''}`, icon: DollarSign, color: 'bg-amber-500', href: '/financeiro' },
     { title: 'Relatórios em rascunho', value: String(data.draftReportsCount), change: 'Ver relatórios →', icon: FileText, color: 'bg-purple-500', href: '/relatorios' },
   ]
 
@@ -333,15 +326,15 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
               <p className="text-xs text-gray-500">Recebido</p>
-              <p className="text-base font-bold text-green-600">{brl(data.monthPaid)}</p>
+              <p className="text-base font-bold text-green-600">{formatCurrency(data.monthPaid)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Pendente</p>
-              <p className="text-base font-bold text-amber-600">{brl(data.monthPending)}</p>
+              <p className="text-base font-bold text-amber-600">{formatCurrency(data.monthPending)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Acordos</p>
-              <p className="text-base font-bold text-blue-600">{brl(data.monthAgreement)}</p>
+              <p className="text-base font-bold text-blue-600">{formatCurrency(data.monthAgreement)}</p>
             </div>
           </div>
           {total > 0 ? (
