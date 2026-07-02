@@ -4,11 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { PatientCombobox } from '@/components/ui/patient-combobox'
 import { createPayment, updatePayment } from '@/app/actions/payments'
+import { PillSelect } from '@/components/ui/pill-select'
 import type { Patient, Payment, PaymentStatus } from '@/types'
 
 export function PaymentForm({
@@ -28,6 +28,7 @@ export function PaymentForm({
   const [amount, setAmount] = useState<string>(payment?.amount?.toString() ?? '')
   const [status, setStatus] = useState<PaymentStatus>(payment?.status ?? 'pending')
   const [dueDate, setDueDate] = useState<string>(payment?.due_date ?? '')
+  const [paymentMethod, setPaymentMethod] = useState<string>(payment?.payment_method ?? '')
 
   function addDays(days: number) {
     const d = new Date()
@@ -150,33 +151,42 @@ export function PaymentForm({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="status">Status</Label>
-          <Select
-            id="status"
+          <Label>Status</Label>
+          <PillSelect
             name="status"
+            options={[
+              { value: 'pending', label: 'Pendente' },
+              { value: 'partial', label: 'Parcial' },
+              { value: 'paid', label: 'Pago' },
+              { value: 'agreement', label: 'Acordo' },
+            ]}
             value={status}
-            onChange={(e) => setStatus(e.target.value as PaymentStatus)}
+            onChange={(v) => setStatus(v as PaymentStatus)}
             disabled={loading}
-          >
-            <option value="pending">Pendente</option>
-            <option value="partial">Parcial</option>
-            <option value="paid">Pago</option>
-            <option value="agreement">Acordo</option>
-          </Select>
+          />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="payment_method">Forma de pagamento</Label>
-        <Select id="payment_method" name="payment_method" defaultValue={payment?.payment_method ?? ''} disabled={loading}>
-          <option value="">Não informado</option>
-          <option value="PIX">PIX</option>
-          <option value="Dinheiro">Dinheiro</option>
-          <option value="Cartão de crédito">Cartão de crédito</option>
-          <option value="Cartão de débito">Cartão de débito</option>
-          <option value="Transferência">Transferência</option>
-          <option value="Outro">Outro</option>
-        </Select>
+        <Label>Forma de pagamento</Label>
+        <input type="hidden" name="payment_method" value={paymentMethod} />
+        <div className="flex flex-wrap gap-1.5">
+          {['PIX', 'Dinheiro', 'Cartão de crédito', 'Cartão de débito', 'Transferência', 'Outro'].map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setPaymentMethod(paymentMethod === m ? '' : m)}
+              disabled={loading}
+              className={`rounded-full px-3 py-1.5 text-sm border transition-colors ${
+                paymentMethod === m
+                  ? 'bg-primary text-primary-foreground border-primary font-medium'
+                  : 'bg-background border-input hover:bg-accent'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-1.5">

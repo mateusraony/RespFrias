@@ -23,8 +23,6 @@ export function GoalForm({ patientId }: { patientId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [description, setDescription] = useState('')
-  const [showTemplates, setShowTemplates] = useState(false)
-
   async function handleSubmit(formData: FormData) {
     setError(null)
     setLoading(true)
@@ -46,31 +44,23 @@ export function GoalForm({ patientId }: { patientId: string }) {
       )}
 
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="description">Nova meta</Label>
-          <button
-            type="button"
-            onClick={() => setShowTemplates((v) => !v)}
-            className="text-xs text-primary hover:underline"
-          >
-            {showTemplates ? 'Fechar sugestões' : '💡 Ver sugestões'}
-          </button>
+        <Label htmlFor="description">Nova meta</Label>
+        <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-muted/40 p-2">
+          {GOAL_TEMPLATES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setDescription(t)}
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                description === t
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-input bg-background hover:bg-accent'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
-
-        {showTemplates && (
-          <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-muted/40 p-2">
-            {GOAL_TEMPLATES.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => { setDescription(t); setShowTemplates(false) }}
-                className="rounded-full border border-input bg-background px-3 py-1 text-xs hover:bg-accent transition-colors"
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <form
