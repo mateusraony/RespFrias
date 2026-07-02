@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { ChartErrorBoundary } from '@/components/ui/chart-error-boundary'
 import type { Assessment } from '@/types'
 
 const AssessmentCharts = dynamic(
@@ -9,5 +10,9 @@ const AssessmentCharts = dynamic(
 )
 
 export function AssessmentChartsWrapper({ assessments }: { assessments: Assessment[] }) {
-  return <AssessmentCharts assessments={assessments} />
+  return (
+    <ChartErrorBoundary>
+      <AssessmentCharts assessments={assessments} />
+    </ChartErrorBoundary>
+  )
 }

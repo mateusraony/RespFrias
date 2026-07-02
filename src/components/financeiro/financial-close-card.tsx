@@ -18,11 +18,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { closeMonth, reopenMonth } from '@/app/actions/financial-close'
+import { formatCurrency } from '@/lib/format'
 import type { FinancialClose } from '@/types'
-
-function formatCurrency(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
 
 export function FinancialCloseCard({
   periodKey,

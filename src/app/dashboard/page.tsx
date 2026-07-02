@@ -24,6 +24,7 @@ import sql from '@/lib/db/client'
 import { generateAlerts } from '@/app/actions/alerts'
 import { getAppointmentsByRange } from '@/app/actions/appointments'
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format as fmtDate } from 'date-fns'
+import { formatCurrency } from '@/lib/format'
 import type { PatientAlert, AppointmentWithPatient } from '@/types'
 
 interface DashboardData {
@@ -122,10 +123,6 @@ async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
-function brl(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
 function StatusBadge({ status }: { status: string }) {
   if (status === 'confirmed') return <Badge variant="success">Confirmado</Badge>
   if (status === 'done') return <Badge variant="secondary">Concluído</Badge>
@@ -158,7 +155,7 @@ export default async function DashboardPage() {
   const summaryCards = [
     { title: 'Pacientes ativos', value: String(data.activePatients), change: 'Ver pacientes →', icon: Users, color: 'bg-teal-500', href: '/pacientes' },
     { title: 'Atendimentos hoje', value: String(data.todayCount), change: 'Ver agenda →', icon: Calendar, color: 'bg-blue-500', href: '/agenda' },
-    { title: 'Pagamentos vencidos', value: brl(data.pendingPaymentsAmount), change: `${data.pendingPaymentsCount} pagamento${data.pendingPaymentsCount !== 1 ? 's' : ''}`, icon: DollarSign, color: 'bg-amber-500', href: '/financeiro' },
+    { title: 'Pagamentos vencidos', value: formatCurrency(data.pendingPaymentsAmount), change: `${data.pendingPaymentsCount} pagamento${data.pendingPaymentsCount !== 1 ? 's' : ''}`, icon: DollarSign, color: 'bg-amber-500', href: '/financeiro' },
     { title: 'Relatórios em rascunho', value: String(data.draftReportsCount), change: 'Ver relatórios →', icon: FileText, color: 'bg-purple-500', href: '/relatorios' },
   ]
 
@@ -329,15 +326,15 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
               <p className="text-xs text-gray-500">Recebido</p>
-              <p className="text-base font-bold text-green-600">{brl(data.monthPaid)}</p>
+              <p className="text-base font-bold text-green-600">{formatCurrency(data.monthPaid)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Pendente</p>
-              <p className="text-base font-bold text-amber-600">{brl(data.monthPending)}</p>
+              <p className="text-base font-bold text-amber-600">{formatCurrency(data.monthPending)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Acordos</p>
-              <p className="text-base font-bold text-blue-600">{brl(data.monthAgreement)}</p>
+              <p className="text-base font-bold text-blue-600">{formatCurrency(data.monthAgreement)}</p>
             </div>
           </div>
           {total > 0 ? (

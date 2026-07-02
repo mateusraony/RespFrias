@@ -46,33 +46,33 @@ export function PatientForm({ patient }: { patient?: Patient }) {
 
       <div className="space-y-1.5">
         <Label htmlFor="name">Nome *</Label>
-        <Input id="name" name="name" defaultValue={patient?.name} required />
+        <Input id="name" name="name" defaultValue={patient?.name} required disabled={loading} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" defaultValue={patient?.email} />
+          <Input id="email" name="email" type="email" defaultValue={patient?.email} disabled={loading} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" name="phone" defaultValue={patient?.phone} />
+          <Input id="phone" name="phone" defaultValue={patient?.phone} disabled={loading} />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="birth_date">Data de nascimento</Label>
-        <Input id="birth_date" name="birth_date" type="date" defaultValue={patient?.birth_date} />
+        <Input id="birth_date" name="birth_date" type="date" defaultValue={patient?.birth_date} disabled={loading} />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="diagnosis">Diagnóstico</Label>
-        <Input id="diagnosis" name="diagnosis" defaultValue={patient?.diagnosis} />
+        <Input id="diagnosis" name="diagnosis" defaultValue={patient?.diagnosis} disabled={loading} />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} defaultValue={patient?.notes} />
+        <Textarea id="notes" name="notes" rows={4} defaultValue={patient?.notes} disabled={loading} />
       </div>
 
       <div className="space-y-1.5">
