@@ -77,7 +77,7 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="patient_id">Paciente *</Label>
-        <Select id="patient_id" name="patient_id" defaultValue={appointment?.patient_id} required>
+        <Select id="patient_id" name="patient_id" defaultValue={appointment?.patient_id} required disabled={loading}>
           <option value="">Selecione um paciente</option>
           {patients.map((p) => (
             <option key={p.id} value={p.id}>
@@ -96,11 +96,12 @@ export function AppointmentForm({
             type="date"
             defaultValue={appointment?.date ?? defaultDate}
             required
+            disabled={loading}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="time">Horário *</Label>
-          <Input id="time" name="time" type="time" defaultValue={appointment?.time?.slice(0, 5)} required />
+          <Input id="time" name="time" type="time" defaultValue={appointment?.time?.slice(0, 5)} required disabled={loading} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="duration_minutes">Duração (min)</Label>
@@ -109,13 +110,14 @@ export function AppointmentForm({
             name="duration_minutes"
             type="number"
             defaultValue={appointment?.duration_minutes ?? 50}
+            disabled={loading}
           />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="status">Status</Label>
-        <Select id="status" name="status" defaultValue={appointment?.status ?? 'pending'}>
+        <Select id="status" name="status" defaultValue={appointment?.status ?? 'pending'} disabled={loading}>
           <option value="pending">Pendente</option>
           <option value="confirmed">Confirmado</option>
           <option value="done">Realizado</option>
@@ -125,7 +127,7 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={3} defaultValue={appointment?.notes} />
+        <Textarea id="notes" name="notes" rows={3} defaultValue={appointment?.notes} disabled={loading} />
       </div>
 
       <div className="flex flex-wrap justify-end gap-2 pt-2">
