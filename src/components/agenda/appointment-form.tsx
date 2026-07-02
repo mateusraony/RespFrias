@@ -37,7 +37,7 @@ export function AppointmentForm({
   const [cancelling, setCancelling] = useState(false)
   const [duration, setDuration] = useState(appointment?.duration_minutes ?? 50)
   const [time, setTime] = useState(appointment?.time?.slice(0, 5) ?? '')
-  const [status, setStatus] = useState(appointment?.status ?? 'pending')
+  const [status, setStatus] = useState<string>(appointment?.status ?? 'pending')
 
   function redirectAfterSave(date?: string) {
     const d = date ?? defaultDate
