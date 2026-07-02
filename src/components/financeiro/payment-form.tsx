@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { PatientCombobox } from '@/components/ui/patient-combobox'
 import { createPayment, updatePayment } from '@/app/actions/payments'
+import { toast } from 'sonner'
 import { PillSelect } from '@/components/ui/pill-select'
 import type { Patient, Payment, PaymentStatus } from '@/types'
 
@@ -69,6 +70,7 @@ export function PaymentForm({
       setError(result.error)
       return
     }
+    toast.success('Pagamento salvo.')
     router.push(redirectTo)
   }
 
@@ -104,6 +106,23 @@ export function PaymentForm({
             required
             disabled={loading}
           />
+          <div className="flex flex-wrap gap-1 pt-0.5">
+            {[60, 80, 100, 120, 150, 200].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setAmount(String(v))}
+                disabled={loading}
+                className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
+                  amount === String(v)
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background border-input hover:bg-accent'
+                }`}
+              >
+                R$ {v}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="amount_paid">Valor pago (R$)</Label>

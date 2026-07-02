@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { PillSelect } from '@/components/ui/pill-select'
 import { AssessmentVitalsFields } from '@/components/pacientes/assessment-vitals-fields'
 import { updateAssessment } from '@/app/actions/assessments'
+import { toast } from 'sonner'
 import type { Assessment } from '@/types'
 
 const ASSESSMENT_TYPE_OPTIONS = [
@@ -21,6 +22,9 @@ export function AssessmentFormEdit({ assessment, patientId }: { assessment: Asse
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [assessmentType, setAssessmentType] = useState<string>(assessment.assessment_type ?? 'periodic')
+  const [notes, setNotes] = useState(assessment.notes ?? '')
+
+  const NOTES_CHIPS = ['Paciente colaborativo', 'Limitado por dispneia', 'TC6 interrompido', 'Valores abaixo do esperado para idade']
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -45,6 +49,7 @@ export function AssessmentFormEdit({ assessment, patientId }: { assessment: Asse
       setError(result.error)
       return
     }
+    toast.success('Avaliação salva.')
     router.push(`/pacientes/${patientId}?tab=avaliacoes`)
   }
 
@@ -85,7 +90,16 @@ export function AssessmentFormEdit({ assessment, patientId }: { assessment: Asse
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} defaultValue={assessment.notes ?? ''} disabled={loading} />
+        <div className="flex flex-wrap gap-1 mb-1">
+          {NOTES_CHIPS.map((c) => (
+            <button key={c} type="button" disabled={loading}
+              onClick={() => setNotes((n) => n ? `${n} · ${c}` : c)}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors disabled:opacity-50">
+              {c}
+            </button>
+          ))}
+        </div>
+        <Textarea id="notes" name="notes" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

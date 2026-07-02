@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createPatient, updatePatient } from '@/app/actions/patients'
+import { toast } from 'sonner'
 import { PATIENT_COLORS } from '@/lib/patient-colors'
 import type { Patient } from '@/types'
 
@@ -32,6 +33,9 @@ export function PatientForm({ patient }: { patient?: Patient }) {
   const [selectedColor, setSelectedColor] = useState(patient?.color ?? PATIENT_COLORS[0])
   const [diagnosisValue, setDiagnosisValue] = useState(patient?.diagnosis ?? '')
   const [diagnosisOpen, setDiagnosisOpen] = useState(false)
+  const [patientNotes, setPatientNotes] = useState(patient?.notes ?? '')
+
+  const NOTES_CHIPS = ['Atendimento domiciliar', 'Familiar acompanhante', 'Sem plano de saúde', 'Uso de O₂ domiciliar', 'Idoso dependente']
 
   const filteredDiagnoses = diagnosisValue.trim()
     ? RESPIRATORY_DIAGNOSES.filter((d) =>
@@ -46,11 +50,13 @@ export function PatientForm({ patient }: { patient?: Patient }) {
       const result = await updatePatient(patient.id, formData)
       setLoading(false)
       if (!result.success) { setError(result.error); return }
+      toast.success('Paciente salvo.')
       router.push(`/pacientes/${patient.id}`)
     } else {
       const result = await createPatient(formData)
       setLoading(false)
       if (!result.success) { setError(result.error); return }
+      toast.success('Paciente criado.')
       router.push(`/pacientes/${result.data.id}`)
     }
   }
@@ -113,7 +119,16 @@ export function PatientForm({ patient }: { patient?: Patient }) {
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} defaultValue={patient?.notes} disabled={loading} />
+        <div className="flex flex-wrap gap-1 mb-1">
+          {NOTES_CHIPS.map((c) => (
+            <button key={c} type="button" disabled={loading}
+              onClick={() => setPatientNotes((n) => n ? `${n} · ${c}` : c)}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors disabled:opacity-50">
+              {c}
+            </button>
+          ))}
+        </div>
+        <Textarea id="notes" name="notes" rows={4} value={patientNotes} onChange={(e) => setPatientNotes(e.target.value)} disabled={loading} />
       </div>
 
       <div className="space-y-1.5">

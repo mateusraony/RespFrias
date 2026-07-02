@@ -12,7 +12,7 @@ export function PaymentRow({ payment }: { payment: PaymentWithPatient }) {
 
   return (
     <Link href={`/financeiro/${payment.id}/editar`}>
-      <Card className="transition-opacity hover:opacity-80">
+      <Card className="transition-all duration-150 hover:shadow-md active:scale-[0.99]">
         <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
           <div className="min-w-0">
             <p className="truncate font-medium">{payment.patient_name ?? 'Paciente removido'}</p>

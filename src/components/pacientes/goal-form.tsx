@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { createGoal } from '@/app/actions/goals'
+import { toast } from 'sonner'
 
 const GOAL_TEMPLATES = [
   'Melhorar SpO₂ em repouso para ≥ 94%',
@@ -23,6 +24,14 @@ export function GoalForm({ patientId }: { patientId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [description, setDescription] = useState('')
+  const [targetDate, setTargetDate] = useState('')
+
+  function addDays(days: number) {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    return d.toISOString().slice(0, 10)
+  }
+
   async function handleSubmit(formData: FormData) {
     setError(null)
     setLoading(true)
@@ -34,6 +43,8 @@ export function GoalForm({ patientId }: { patientId: string }) {
       return
     }
     setDescription('')
+    setTargetDate('')
+    toast.success('Meta adicionada.')
     router.refresh()
   }
 
@@ -79,7 +90,15 @@ export function GoalForm({ patientId }: { patientId: string }) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="target_date">Prazo</Label>
-          <Input id="target_date" name="target_date" type="date" />
+          <Input id="target_date" name="target_date" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          <div className="flex flex-wrap gap-1 pt-0.5">
+            {[{ label: '+30 dias', days: 30 }, { label: '+60 dias', days: 60 }, { label: '+3 meses', days: 90 }, { label: '+6 meses', days: 180 }].map(({ label, days }) => (
+              <button key={label} type="button" onClick={() => setTargetDate(addDays(days))}
+                className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors">
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <Button type="submit" disabled={loading}>
           {loading ? 'Salvando...' : 'Adicionar'}

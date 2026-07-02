@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { PillSelect } from '@/components/ui/pill-select'
 import { AssessmentVitalsFields } from '@/components/pacientes/assessment-vitals-fields'
 import { createAssessment } from '@/app/actions/assessments'
+import { toast } from 'sonner'
 
 const ASSESSMENT_TYPE_OPTIONS = [
   { value: 'initial', label: 'Avaliação inicial' },
@@ -20,6 +21,9 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [assessmentType, setAssessmentType] = useState<string>('initial')
+  const [notes, setNotes] = useState('')
+
+  const NOTES_CHIPS = ['Paciente colaborativo', 'Limitado por dispneia', 'TC6 interrompido', 'Valores abaixo do esperado para idade']
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -44,7 +48,8 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
       setError(result.error)
       return
     }
-    router.push(`/pacientes/${patientId}`)
+    toast.success('Avaliação salva.')
+    router.push(`/pacientes/${patientId}?tab=avaliacoes`)
   }
 
   return (
@@ -74,7 +79,16 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} disabled={loading} />
+        <div className="flex flex-wrap gap-1 mb-1">
+          {NOTES_CHIPS.map((c) => (
+            <button key={c} type="button" disabled={loading}
+              onClick={() => setNotes((n) => n ? `${n} · ${c}` : c)}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors disabled:opacity-50">
+              {c}
+            </button>
+          ))}
+        </div>
+        <Textarea id="notes" name="notes" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">
