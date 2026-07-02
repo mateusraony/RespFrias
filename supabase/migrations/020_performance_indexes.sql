@@ -1,11 +1,11 @@
--- Performance indexes for common query patterns
--- Each index covers the WHERE clauses most used in the application.
+-- Performance indexes for common query patterns.
+-- Only adds indexes not already created by earlier migrations.
+-- Partial indexes (WHERE deleted_at IS NULL) only on tables that have that column:
+--   patients, appointments, goals — YES
+--   payments, sessions, assessments, reports, job_runs, audit_logs — NO
 
--- appointments: busca por data (agenda dia/semana/mês) e por paciente
-CREATE INDEX IF NOT EXISTS idx_appointments_date
-  ON appointments (date)
-  WHERE deleted_at IS NULL;
-
+-- appointments (has deleted_at): date index already exists in 008;
+-- add composite and status indexes
 CREATE INDEX IF NOT EXISTS idx_appointments_patient_date
   ON appointments (patient_id, date)
   WHERE deleted_at IS NULL;
@@ -14,55 +14,42 @@ CREATE INDEX IF NOT EXISTS idx_appointments_status
   ON appointments (status)
   WHERE deleted_at IS NULL;
 
--- patients: listagem e verificação de soft-delete
-CREATE INDEX IF NOT EXISTS idx_patients_deleted_at
-  ON patients (deleted_at);
-
+-- patients (has deleted_at): deleted_at index already exists in 001;
+-- add name search index
 CREATE INDEX IF NOT EXISTS idx_patients_name
   ON patients (name)
   WHERE deleted_at IS NULL;
 
--- payments: filtros financeiros por status e vencimento
+-- payments (no deleted_at column)
 CREATE INDEX IF NOT EXISTS idx_payments_status_due
-  ON payments (status, due_date)
-  WHERE deleted_at IS NULL;
+  ON payments (status, due_date);
 
 CREATE INDEX IF NOT EXISTS idx_payments_patient
-  ON payments (patient_id)
-  WHERE deleted_at IS NULL;
+  ON payments (patient_id);
 
 CREATE INDEX IF NOT EXISTS idx_payments_due_date
-  ON payments (due_date)
-  WHERE deleted_at IS NULL;
+  ON payments (due_date);
 
--- sessions: busca por paciente (ficha do paciente)
+-- sessions (no deleted_at column)
 CREATE INDEX IF NOT EXISTS idx_sessions_patient
-  ON sessions (patient_id)
-  WHERE deleted_at IS NULL;
+  ON sessions (patient_id);
 
-CREATE INDEX IF NOT EXISTS idx_sessions_date
-  ON sessions (patient_id, date DESC)
-  WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_sessions_patient_date
+  ON sessions (patient_id, date DESC);
 
--- assessments: busca por paciente
+-- assessments (no deleted_at column)
 CREATE INDEX IF NOT EXISTS idx_assessments_patient
-  ON assessments (patient_id)
-  WHERE deleted_at IS NULL;
+  ON assessments (patient_id);
 
--- goals: busca por paciente
-CREATE INDEX IF NOT EXISTS idx_goals_patient
-  ON goals (patient_id)
-  WHERE deleted_at IS NULL;
-
--- reports: busca por paciente e status (aprovação, envio)
+-- reports (no deleted_at column)
 CREATE INDEX IF NOT EXISTS idx_reports_patient_status
   ON reports (patient_id, status);
 
--- job_runs: idempotência dos cron jobs
+-- job_runs (no deleted_at column): idempotência dos cron jobs
 CREATE INDEX IF NOT EXISTS idx_job_runs_name_period
   ON job_runs (job_name, period_key);
 
--- audit_logs: consulta por entidade
+-- audit_logs (no deleted_at column)
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity
   ON audit_logs (entity_type, entity_id);
 
