@@ -42,7 +42,7 @@ export function EvolutionEditor({ session, patientId }: { session: Session; pati
         savedDraftRef.current = draft
         setLastSaved(new Date())
       }
-    }, 30_000)
+    }, 8_000)
 
     return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current) }
   }, [draft, isFinalized, session.id, patientId])
@@ -95,11 +95,30 @@ export function EvolutionEditor({ session, patientId }: { session: Session; pati
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
+      {(() => {
+        const pairs: string[] = []
+        if (session.spo2_before != null && session.spo2_after != null) pairs.push(`SpO₂: ${session.spo2_before}% → ${session.spo2_after}%`)
+        if (session.borg_before != null && session.borg_after != null) pairs.push(`Borg: ${session.borg_before} → ${session.borg_after}`)
+        if (session.respiratory_rate_before != null && session.respiratory_rate_after != null) pairs.push(`FR: ${session.respiratory_rate_before} → ${session.respiratory_rate_after} irpm`)
+        if (session.heart_rate_before != null && session.heart_rate_after != null) pairs.push(`FC: ${session.heart_rate_before} → ${session.heart_rate_after} bpm`)
+        if (pairs.length === 0) return null
+        const vitalsLine = pairs.join('  ·  ')
+        return (
+          <button
+            type="button"
+            onClick={() => setDraft((d) => d ? `${d}\n${vitalsLine}` : vitalsLine)}
+            className="self-start rounded-full px-3 py-1 text-xs border border-input bg-background hover:bg-accent transition-colors"
+          >
+            ⚡ Inserir dados da sessão
+          </button>
+        )
+      })()}
       <Textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         rows={10}
         className="font-mono text-sm"
+        placeholder={'S: Paciente refere...\nO: SpO₂ ... Borg ... FR ... FC ...\nA: ...\nP: ...'}
       />
       {lastSaved && (
         <p className="text-xs text-muted-foreground">

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { PatientCombobox } from '@/components/ui/patient-combobox'
 import { createPayment, updatePayment } from '@/app/actions/payments'
+import { toast } from 'sonner'
 import { PillSelect } from '@/components/ui/pill-select'
 import type { Patient, Payment, PaymentStatus } from '@/types'
 
@@ -69,6 +70,7 @@ export function PaymentForm({
       setError(result.error)
       return
     }
+    toast.success('Pagamento salvo.')
     router.push(redirectTo)
   }
 

@@ -186,6 +186,9 @@ export function ClinicalFileForm({
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [history, setHistory] = useState(clinicalFile?.history ?? '')
+
+  const HISTORY_CHIPS = ['Tabagismo', 'Ex-tabagista', 'Internações por exacerbação', 'Cirurgia torácica prévia', 'Uso de O₂ domiciliar', 'Sedentário']
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -223,8 +226,17 @@ export function ClinicalFileForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="history">Histórico</Label>
-        <Textarea id="history" name="history" rows={3} defaultValue={clinicalFile?.history} />
+        <Label htmlFor="history">Histórico clínico relevante</Label>
+        <div className="flex flex-wrap gap-1 mb-1">
+          {HISTORY_CHIPS.map((c) => (
+            <button key={c} type="button"
+              onClick={() => setHistory((h) => h ? `${h} · ${c}` : c)}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors">
+              {c}
+            </button>
+          ))}
+        </div>
+        <Textarea id="history" name="history" rows={3} value={history} onChange={(e) => setHistory(e.target.value)} />
       </div>
 
       <TagInputWithSuggestions
@@ -245,15 +257,14 @@ export function ClinicalFileForm({
         suggestions={['Dipirona', 'Penicilina', 'AAS', 'Ibuprofeno', 'Látex']}
       />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="precautions">Precauções</Label>
-        <Textarea
-          id="precautions"
-          name="precautions"
-          rows={2}
-          defaultValue={clinicalFile?.precautions}
-        />
-      </div>
+      <TagInputWithSuggestions
+        id="precautions"
+        name="precautions"
+        label="Precauções"
+        defaultValue={clinicalFile?.precautions}
+        placeholder="Ex: Uso de O₂ suplementar — adicione uma por vez"
+        suggestions={['Uso de O₂ suplementar', 'Hipertensão não controlada', 'Arritmia cardíaca', 'Pós-op torácico recente', 'Insuficiência cardíaca', 'Queda de SpO₂ ao esforço']}
+      />
 
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={loading}>

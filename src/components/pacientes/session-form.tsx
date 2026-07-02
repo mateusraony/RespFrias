@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { VitalsFields } from './vitals-fields'
 import { createSession } from '@/app/actions/sessions'
+import { toast } from 'sonner'
 import { TECHNIQUES } from '@/lib/techniques'
 import type { SessionType } from '@/types'
 
@@ -27,6 +28,9 @@ export function SessionForm({
   const [loading, setLoading] = useState(false)
   const [duration, setDuration] = useState(50)
   const [selectedTechniques, setSelectedTechniques] = useState<string[]>([])
+  const [notes, setNotes] = useState('')
+
+  const NOTES_CHIPS = ['Tolerou bem', 'Sem intercorrências', 'Pausa necessária', 'Dispneia ao esforço', 'Boa cooperação', 'Necessitou O₂']
 
   function toggleTechnique(t: string) {
     setSelectedTechniques((prev) =>
@@ -45,6 +49,7 @@ export function SessionForm({
       setError(result.error)
       return
     }
+    toast.success('Sessão salva.')
     router.push(`/pacientes/${patientId}/sessoes/${result.data.id}`)
   }
 
@@ -128,7 +133,16 @@ export function SessionForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={4} disabled={loading} />
+        <div className="flex flex-wrap gap-1 mb-1">
+          {NOTES_CHIPS.map((c) => (
+            <button key={c} type="button" disabled={loading}
+              onClick={() => setNotes((n) => n ? `${n} · ${c}` : c)}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors disabled:opacity-50">
+              {c}
+            </button>
+          ))}
+        </div>
+        <Textarea id="notes" name="notes" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={loading} />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

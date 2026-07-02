@@ -16,6 +16,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import { createAppointment, updateAppointment, cancelAppointment } from '@/app/actions/appointments'
+import { toast } from 'sonner'
 import { PatientCombobox } from '@/components/ui/patient-combobox'
 import { PillSelect } from '@/components/ui/pill-select'
 import type { Appointment, Patient } from '@/types'
@@ -38,6 +39,9 @@ export function AppointmentForm({
   const [duration, setDuration] = useState(appointment?.duration_minutes ?? 50)
   const [time, setTime] = useState(appointment?.time?.slice(0, 5) ?? '')
   const [status, setStatus] = useState<string>(appointment?.status ?? 'pending')
+  const [apptNotes, setApptNotes] = useState(appointment?.notes ?? '')
+
+  const NOTES_CHIPS = ['Primeira consulta', 'Reagendamento', 'Cadeira de rodas', 'Levar oxímetro', 'Confirmado por telefone']
 
   function redirectAfterSave(date?: string) {
     const d = date ?? defaultDate
@@ -57,6 +61,7 @@ export function AppointmentForm({
       setError(result.error)
       return
     }
+    toast.success('Agendamento salvo.')
     redirectAfterSave(formData.get('date') as string)
   }
 
@@ -171,7 +176,16 @@ export function AppointmentForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" name="notes" rows={3} defaultValue={appointment?.notes} disabled={loading} />
+        <div className="flex flex-wrap gap-1 mb-1">
+          {NOTES_CHIPS.map((c) => (
+            <button key={c} type="button" disabled={loading}
+              onClick={() => setApptNotes((n) => n ? `${n} · ${c}` : c)}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors disabled:opacity-50">
+              {c}
+            </button>
+          ))}
+        </div>
+        <Textarea id="notes" name="notes" rows={3} value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} disabled={loading} />
       </div>
 
       <div className="flex flex-wrap justify-end gap-2 pt-2">
