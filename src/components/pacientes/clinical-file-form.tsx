@@ -41,7 +41,11 @@ function TagInput({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <input type="hidden" name={name} value={tags.join('\n')} />
+      <input
+        type="hidden"
+        name={name}
+        value={input.trim() ? [...tags, input.trim()].join('\n') : tags.join('\n')}
+      />
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pb-1">
           {tags.map((tag) => (

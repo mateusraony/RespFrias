@@ -18,9 +18,9 @@ export function AppointmentPill({ appointment }: { appointment: AppointmentWithP
     e.stopPropagation()
     if (markedDone || marking) return
     setMarking(true)
-    await updateAppointmentStatus(appointment.id, 'done')
-    setMarkedDone(true)
+    const result = await updateAppointmentStatus(appointment.id, 'done')
     setMarking(false)
+    if (result.success) setMarkedDone(true)
   }
 
   return (
