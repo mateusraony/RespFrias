@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { PatientCombobox } from '@/components/ui/patient-combobox'
 import { createPayment, updatePayment } from '@/app/actions/payments'
-import type { Patient, Payment } from '@/types'
+import type { Patient, Payment, PaymentStatus } from '@/types'
 
 export function PaymentForm({
   patients,
@@ -24,13 +25,25 @@ export function PaymentForm({
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [amount, setAmount] = useState<string>(payment?.amount?.toString() ?? '')
+  const [status, setStatus] = useState<PaymentStatus>(payment?.status ?? 'pending')
+
+  function handleAmountPaidChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const paid = parseFloat(e.target.value)
+    const total = parseFloat(amount)
+    if (!isNaN(paid) && !isNaN(total) && total > 0) {
+      if (paid >= total) setStatus('paid')
+      else if (paid > 0) setStatus('partial')
+      else setStatus('pending')
+    }
+  }
 
   async function handleSubmit(formData: FormData) {
     setError(null)
 
-    const amount = Number(formData.get('amount') ?? 0)
+    const totalAmount = Number(formData.get('amount') ?? 0)
     const amountPaid = formData.get('amount_paid') ? Number(formData.get('amount_paid')) : null
-    if (amountPaid !== null && amountPaid > amount) {
+    if (amountPaid !== null && amountPaid > totalAmount) {
       setError('Valor pago não pode ser maior que o valor total.')
       return
     }
@@ -55,15 +68,14 @@ export function PaymentForm({
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="patient_id">Paciente *</Label>
-        <Select id="patient_id" name="patient_id" defaultValue={payment?.patient_id ?? defaultPatientId} required disabled={loading}>
-          <option value="">Selecione um paciente</option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
+        <Label>Paciente *</Label>
+        <PatientCombobox
+          patients={patients}
+          defaultValue={payment?.patient_id ?? defaultPatientId}
+          name="patient_id"
+          required
+          disabled={loading}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -76,7 +88,8 @@ export function PaymentForm({
             inputMode="decimal"
             step="0.01"
             min="0.01"
-            defaultValue={payment?.amount}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             required
             disabled={loading}
           />
@@ -91,6 +104,7 @@ export function PaymentForm({
             step="0.01"
             min="0"
             defaultValue={payment?.amount_paid}
+            onChange={handleAmountPaidChange}
             disabled={loading}
           />
         </div>
@@ -103,7 +117,13 @@ export function PaymentForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="status">Status</Label>
-          <Select id="status" name="status" defaultValue={payment?.status ?? 'pending'} disabled={loading}>
+          <Select
+            id="status"
+            name="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as PaymentStatus)}
+            disabled={loading}
+          >
             <option value="pending">Pendente</option>
             <option value="partial">Parcial</option>
             <option value="paid">Pago</option>
