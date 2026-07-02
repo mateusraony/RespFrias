@@ -55,7 +55,7 @@ export function AssessmentFormEdit({ assessment, patientId }: { assessment: Asse
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [assessmentType, setAssessmentType] = useState(assessment.assessment_type ?? 'periodic')
+  const [assessmentType, setAssessmentType] = useState<string>(assessment.assessment_type ?? 'periodic')
 
   async function handleSubmit(formData: FormData) {
     setError(null)

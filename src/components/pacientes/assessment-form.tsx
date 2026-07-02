@@ -54,7 +54,7 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [assessmentType, setAssessmentType] = useState('initial')
+  const [assessmentType, setAssessmentType] = useState<string>('initial')
 
   async function handleSubmit(formData: FormData) {
     setError(null)
