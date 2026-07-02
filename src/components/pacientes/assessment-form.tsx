@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { ChipInput } from '@/components/ui/chip-input'
+import { PillSelect } from '@/components/ui/pill-select'
 import { createAssessment } from '@/app/actions/assessments'
 
 const CHIP_SETS: Record<string, number[]> = {
@@ -14,54 +15,13 @@ const CHIP_SETS: Record<string, number[]> = {
   borg: [0, 2, 4, 5, 6, 8, 10],
   respiratory_rate: [12, 16, 20, 24],
   heart_rate: [55, 60, 70, 80, 90, 100, 110],
+  six_mwt_distance: [200, 300, 350, 400, 450, 500],
 }
 
-function ChipInput({
-  id,
-  name,
-  chips,
-  disabled,
-  ...inputProps
-}: {
-  id: string
-  name: string
-  chips: number[]
-  disabled?: boolean
-} & React.InputHTMLAttributes<HTMLInputElement>) {
-  const [value, setValue] = useState(String(inputProps.defaultValue ?? ''))
-
-  return (
-    <div className="space-y-1">
-      <Input
-        id={id}
-        name={name}
-        type="number"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        disabled={disabled}
-        {...inputProps}
-        defaultValue={undefined}
-      />
-      <div className="flex flex-wrap gap-1">
-        {chips.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setValue(String(c))}
-            disabled={disabled}
-            className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
-              value === String(c)
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background border-input hover:bg-accent'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
+const ASSESSMENT_TYPE_OPTIONS = [
+  { value: 'initial', label: 'Avaliação inicial' },
+  { value: 'periodic', label: 'Avaliação periódica' },
+]
 
 function MrcToggle({ disabled }: { disabled?: boolean }) {
   const [value, setValue] = useState<number | null>(null)
@@ -94,6 +54,7 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [assessmentType, setAssessmentType] = useState('initial')
 
   async function handleSubmit(formData: FormData) {
     setError(null)
@@ -129,11 +90,14 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="assessment_type">Tipo *</Label>
-          <Select id="assessment_type" name="assessment_type" defaultValue="initial" required disabled={loading}>
-            <option value="initial">Avaliação inicial</option>
-            <option value="periodic">Avaliação periódica</option>
-          </Select>
+          <Label>Tipo *</Label>
+          <PillSelect
+            name="assessment_type"
+            options={ASSESSMENT_TYPE_OPTIONS}
+            value={assessmentType}
+            onChange={setAssessmentType}
+            disabled={loading}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="date">Data *</Label>
@@ -164,7 +128,7 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="six_mwt_distance">TC6 — distância (m)</Label>
-          <Input id="six_mwt_distance" name="six_mwt_distance" type="number" min={0} placeholder="ex: 420" disabled={loading} />
+          <ChipInput id="six_mwt_distance" name="six_mwt_distance" chips={CHIP_SETS.six_mwt_distance} min={0} placeholder="ex: 420" disabled={loading} />
         </div>
       </div>
 
