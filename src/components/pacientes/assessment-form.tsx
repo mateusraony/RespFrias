@@ -9,6 +9,87 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createAssessment } from '@/app/actions/assessments'
 
+const CHIP_SETS: Record<string, number[]> = {
+  spo2: [90, 91, 92, 93, 94, 95, 96, 97, 98, 99],
+  borg: [0, 2, 4, 5, 6, 8, 10],
+  respiratory_rate: [12, 16, 20, 24],
+  heart_rate: [55, 60, 70, 80, 90, 100, 110],
+}
+
+function ChipInput({
+  id,
+  name,
+  chips,
+  disabled,
+  ...inputProps
+}: {
+  id: string
+  name: string
+  chips: number[]
+  disabled?: boolean
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  const [value, setValue] = useState(String(inputProps.defaultValue ?? ''))
+
+  return (
+    <div className="space-y-1">
+      <Input
+        id={id}
+        name={name}
+        type="number"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={disabled}
+        {...inputProps}
+        defaultValue={undefined}
+      />
+      <div className="flex flex-wrap gap-1">
+        {chips.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setValue(String(c))}
+            disabled={disabled}
+            className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
+              value === String(c)
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-input hover:bg-accent'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MrcToggle({ disabled }: { disabled?: boolean }) {
+  const [value, setValue] = useState<number | null>(null)
+
+  return (
+    <div className="space-y-1">
+      <input type="hidden" name="mrc_scale" value={value ?? ''} />
+      <div className="flex gap-1">
+        {[0, 1, 2, 3, 4, 5].map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setValue(value === v ? null : v)}
+            disabled={disabled}
+            className={`flex-1 rounded-md py-1.5 text-sm border transition-colors ${
+              value === v
+                ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                : 'bg-background border-input hover:bg-accent'
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function AssessmentForm({ patientId }: { patientId: string }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -63,27 +144,27 @@ export function AssessmentForm({ patientId }: { patientId: string }) {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label htmlFor="spo2">SpO₂ (%)</Label>
-          <Input id="spo2" name="spo2" type="number" step="1" min={0} max={100} disabled={loading} />
+          <ChipInput id="spo2" name="spo2" chips={CHIP_SETS.spo2} min={0} max={100} step="1" disabled={loading} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="borg">Borg (0-10)</Label>
-          <Input id="borg" name="borg" type="number" step="0.5" min={0} max={10} disabled={loading} />
+          <Label htmlFor="borg">Borg (0–10)</Label>
+          <ChipInput id="borg" name="borg" chips={CHIP_SETS.borg} min={0} max={10} step="0.5" disabled={loading} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="respiratory_rate">FR (irpm)</Label>
-          <Input id="respiratory_rate" name="respiratory_rate" type="number" disabled={loading} />
+          <ChipInput id="respiratory_rate" name="respiratory_rate" chips={CHIP_SETS.respiratory_rate} min={1} disabled={loading} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="heart_rate">FC (bpm)</Label>
-          <Input id="heart_rate" name="heart_rate" type="number" disabled={loading} />
+          <ChipInput id="heart_rate" name="heart_rate" chips={CHIP_SETS.heart_rate} min={1} disabled={loading} />
+        </div>
+        <div className="space-y-1.5 col-span-2 sm:col-span-3">
+          <Label>Escala MRC (0–5)</Label>
+          <MrcToggle disabled={loading} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="mrc_scale">Escala MRC (0-5)</Label>
-          <Input id="mrc_scale" name="mrc_scale" type="number" min={0} max={5} disabled={loading} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="six_mwt_distance">TC6 (m)</Label>
-          <Input id="six_mwt_distance" name="six_mwt_distance" type="number" disabled={loading} />
+          <Label htmlFor="six_mwt_distance">TC6 — distância (m)</Label>
+          <Input id="six_mwt_distance" name="six_mwt_distance" type="number" min={0} placeholder="ex: 420" disabled={loading} />
         </div>
       </div>
 
