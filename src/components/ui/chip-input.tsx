@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { InputHTMLAttributes } from 'react'
 import { Input } from '@/components/ui/input'
 
 export function ChipInput({
@@ -16,7 +17,7 @@ export function ChipInput({
   chips: number[]
   defaultValue?: number | string
   disabled?: boolean
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'defaultValue'>) {
+} & Omit<InputHTMLAttributes<HTMLInputElement>, 'defaultValue'>) {
   const [value, setValue] = useState(defaultValue != null ? String(defaultValue) : '')
 
   return (
