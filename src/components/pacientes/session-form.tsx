@@ -134,6 +134,13 @@ export function SessionForm({
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
         <div className="flex flex-wrap gap-1 mb-1">
+          {lastSession?.notes && (
+            <button type="button" disabled={loading}
+              onClick={() => setNotes(lastSession.notes ?? '')}
+              className="rounded-full px-2.5 py-0.5 text-xs border border-[#0d7ea8]/40 bg-[#0d7ea8]/5 text-[#0d7ea8] hover:bg-[#0d7ea8]/10 transition-colors disabled:opacity-50">
+              ↩ Repetir obs. anterior
+            </button>
+          )}
           {NOTES_CHIPS.map((c) => (
             <button key={c} type="button" disabled={loading}
               onClick={() => setNotes((n) => n ? `${n} · ${c}` : c)}

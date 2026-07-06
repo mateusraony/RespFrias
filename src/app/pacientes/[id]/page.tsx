@@ -29,6 +29,7 @@ import { DeleteReportButton } from '@/components/relatorios/delete-report-button
 import { AssessmentChartsWrapper } from '@/components/relatorios/assessment-charts-wrapper'
 import { SessionChartsWrapper } from '@/components/pacientes/session-charts-wrapper'
 import { PackageWidget } from '@/components/pacientes/package-widget'
+import { PatientSessionsFilter } from '@/components/pacientes/patient-sessions-filter'
 import { getActivePackage } from '@/app/actions/packages'
 
 
@@ -197,11 +198,7 @@ export default async function PacientePage({
           {sessions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma sessão registrada.</p>
           ) : (
-            <div className="space-y-2">
-              {sessions.map((s) => (
-                <SessionCard key={s.id} session={s} patientId={id} />
-              ))}
-            </div>
+            <PatientSessionsFilter sessions={sessions} patientId={id} />
           )}
         </div>
       ),
@@ -340,28 +337,36 @@ export default async function PacientePage({
       content: (
         <div className="space-y-4">
           {/* Gráficos de evolução das sessões */}
-          {sessions.length >= 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Evolução nas Sessões</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Evolução nas Sessões</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sessions.length >= 2 ? (
                 <SessionChartsWrapper sessions={sessions.slice(0, 20)} />
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">
+                  Registre ao menos 2 sessões para ver a evolução nos gráficos.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Gráficos de avaliações */}
-          {assessments.length >= 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Evolução nas Avaliações</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Evolução nas Avaliações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {assessments.length >= 2 ? (
                 <AssessmentChartsWrapper assessments={assessments} />
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <p className="text-sm text-muted-foreground py-2">
+                  Registre ao menos 2 avaliações para ver a evolução nos gráficos.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Relatórios gerados */}
           <Card>
