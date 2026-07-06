@@ -4,7 +4,6 @@ import {
   FileText,
   DollarSign,
   Settings,
-  BarChart2,
   ChevronRight,
   UserCircle,
 } from 'lucide-react'
@@ -20,7 +19,6 @@ const sections = [
   {
     items: [
       { href: '/financeiro', label: 'Financeiro', description: 'Pagamentos, acordos e fechamento mensal', icon: DollarSign, color: 'text-amber-500 bg-amber-50' },
-      { href: '/relatorios', label: 'Análises', description: 'Evolução clínica e gráficos', icon: BarChart2, color: 'text-blue-500 bg-blue-50' },
     ],
   },
   {
