@@ -191,7 +191,7 @@ function PhaseInput({ label, fieldName, value, onChange, vital, status, accentCl
             key={chip}
             type="button"
             onClick={() => onChange(String(chip))}
-            className={`rounded-md px-2 py-1 text-xs font-medium transition-all active:scale-95 ${
+            className={`rounded-md px-2 py-1.5 min-h-[36px] text-xs font-medium transition-all active:scale-95 ${
               value === String(chip)
                 ? STATUS_COLORS[vital.getStatus(chip) ?? 'good']
                 : 'bg-white/80 text-gray-600 hover:bg-white border border-gray-200'

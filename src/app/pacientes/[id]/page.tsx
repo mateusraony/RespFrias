@@ -257,7 +257,7 @@ export default async function PacientePage({
       content: (
         <div className="space-y-3">
           <Button asChild>
-            <Link href={`/agenda/nova`}>Novo agendamento</Link>
+            <Link href={`/agenda/nova?patient_id=${id}`}>Novo agendamento</Link>
           </Button>
           {patientAppointments.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum agendamento futuro.</p>
@@ -407,16 +407,6 @@ export default async function PacientePage({
           </Card>
         </div>
       ),
-    },
-    {
-      key: 'anexos',
-      label: 'Anexos',
-      content: <PlaceholderTab text="Anexos serão implementados futuramente." />,
-    },
-    {
-      key: 'comunicacao',
-      label: 'Comunicação',
-      content: <PlaceholderTab text="Comunicação (Telegram) será implementada na Fase 5." />,
     },
     {
       key: 'auditoria',

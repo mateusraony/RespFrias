@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { saveClinicalFile } from '@/app/actions/assessments'
+import { toast } from 'sonner'
 import type { ClinicalFile } from '@/types'
 
 function TagInput({
@@ -184,7 +185,6 @@ export function ClinicalFileForm({
   clinicalFile: ClinicalFile | null
 }) {
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState(clinicalFile?.history ?? '')
 
@@ -192,7 +192,6 @@ export function ClinicalFileForm({
 
   async function handleSubmit(formData: FormData) {
     setError(null)
-    setSaved(false)
     setLoading(true)
     const result = await saveClinicalFile(patientId, formData)
     setLoading(false)
@@ -201,18 +200,13 @@ export function ClinicalFileForm({
       setError(result.error)
       return
     }
-    setSaved(true)
+    toast.success('Ficha clínica salva.')
   }
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); handleSubmit(new FormData(e.currentTarget)) }} className="space-y-4">
       {error && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
-      )}
-      {saved && (
-        <p className="rounded-md bg-green-100 px-3 py-2 text-sm text-green-800">
-          Ficha clínica salva.
-        </p>
       )}
 
       <div className="space-y-1.5">

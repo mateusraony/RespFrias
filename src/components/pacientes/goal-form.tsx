@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +25,7 @@ export function GoalForm({ patientId }: { patientId: string }) {
   const [loading, setLoading] = useState(false)
   const [description, setDescription] = useState('')
   const [targetDate, setTargetDate] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
 
   function addDays(days: number) {
     const d = new Date()
@@ -75,6 +76,7 @@ export function GoalForm({ patientId }: { patientId: string }) {
       </div>
 
       <form
+        ref={formRef}
         action={(formData) => { handleSubmit(formData) }}
         className="flex flex-col gap-2 sm:flex-row sm:items-end"
       >
@@ -84,6 +86,7 @@ export function GoalForm({ patientId }: { patientId: string }) {
             name="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && description.trim()) { e.preventDefault(); formRef.current && handleSubmit(new FormData(formRef.current)) } }}
             placeholder="Descrição da meta"
             required
           />

@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic'
 
-import Link from 'next/link'
-import { Activity, CheckCircle, Clock } from 'lucide-react'
-import { safeDate } from '@/lib/format'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Activity } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { SessionsFilter } from '@/components/sessoes/sessions-filter'
 import sql from '@/lib/db/client'
 
 interface SessionRow {
@@ -56,60 +55,10 @@ export default async function SessoesPage() {
           <CardContent className="py-12 text-center text-muted-foreground">
             <Activity className="mx-auto mb-3 h-8 w-8 opacity-40" />
             <p className="text-sm">Nenhuma sessão registrada ainda.</p>
-            <p className="text-xs mt-1">
-              Acesse um{' '}
-              <Link href="/pacientes" className="text-[#0d7ea8] underline underline-offset-2">
-                paciente
-              </Link>{' '}
-              para registrar a primeira sessão.
-            </p>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Activity className="h-4 w-4" /> Sessões Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y">
-            {sessions.map((s) => (
-              <Link
-                key={s.id}
-                href={`/pacientes/${s.patient_id}?tab=sessoes`}
-                className="flex items-start justify-between gap-3 py-3 hover:bg-gray-50 rounded-md px-1 -mx-1 transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{s.patient_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {safeDate(s.date)}
-                    {s.duration_minutes ? ` · ${s.duration_minutes} min` : ''}
-                    {s.spo2_before != null && s.spo2_after != null
-                      ? ` · SpO₂ ${s.spo2_before}%→${s.spo2_after}%`
-                      : ''}
-                    {s.borg_before != null && s.borg_after != null
-                      ? ` · Borg ${s.borg_before}→${s.borg_after}`
-                      : ''}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <Badge variant={s.session_type === 'full' ? 'default' : 'outline'} className="text-xs">
-                    {s.session_type === 'full' ? 'Completa' : 'Rápida'}
-                  </Badge>
-                  {s.evolution_finalized_at ? (
-                    <span className="flex items-center gap-1 text-xs text-emerald-600">
-                      <CheckCircle className="h-3 w-3" /> Finalizada
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-amber-500">
-                      <Clock className="h-3 w-3" /> Rascunho
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
+        <SessionsFilter sessions={sessions} />
       )}
     </div>
   )
