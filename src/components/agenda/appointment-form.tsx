@@ -18,6 +18,7 @@ import {
 import { createAppointment, updateAppointment, cancelAppointment } from '@/app/actions/appointments'
 import { toast } from 'sonner'
 import { PatientCombobox } from '@/components/ui/patient-combobox'
+import { DURATION_OPTIONS } from '@/lib/session-constants'
 import { PillSelect } from '@/components/ui/pill-select'
 import type { Appointment, Patient } from '@/types'
 
@@ -141,7 +142,7 @@ export function AppointmentForm({
             disabled={loading}
           />
           <div className="flex gap-1.5 pt-1">
-            {[30, 45, 50, 60].map((d) => (
+            {DURATION_OPTIONS.map((d) => (
               <button
                 key={d}
                 type="button"

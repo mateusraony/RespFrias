@@ -10,6 +10,7 @@ import { VitalsFields } from './vitals-fields'
 import { updateSession } from '@/app/actions/sessions'
 import { toast } from 'sonner'
 import { TECHNIQUES } from '@/lib/techniques'
+import { SESSION_NOTES_CHIPS, DURATION_OPTIONS } from '@/lib/session-constants'
 import type { Session } from '@/types'
 
 export function SessionFormEdit({
@@ -30,7 +31,6 @@ export function SessionFormEdit({
   )
   const [notes, setNotes] = useState(session.notes ?? '')
 
-  const NOTES_CHIPS = ['Tolerou bem', 'Sem intercorrências', 'Pausa necessária', 'Dispneia ao esforço', 'Boa cooperação', 'Necessitou O₂']
 
   function toggleTechnique(t: string) {
     setSelectedTechniques((prev) =>
@@ -75,7 +75,7 @@ export function SessionFormEdit({
             disabled={loading}
           />
           <div className="flex gap-1.5 pt-1">
-            {[30, 45, 50, 60].map((d) => (
+            {DURATION_OPTIONS.map((d) => (
               <button
                 key={d}
                 type="button"
@@ -125,7 +125,7 @@ export function SessionFormEdit({
       <div className="space-y-1.5">
         <Label htmlFor="notes">Observações</Label>
         <div className="flex flex-wrap gap-1 mb-1">
-          {NOTES_CHIPS.map((c) => (
+          {SESSION_NOTES_CHIPS.map((c) => (
             <button key={c} type="button" disabled={loading}
               onClick={() => setNotes((n) => n ? `${n} · ${c}` : c)}
               className="rounded-full px-2.5 py-0.5 text-xs border border-input bg-background hover:bg-accent transition-colors disabled:opacity-50">
