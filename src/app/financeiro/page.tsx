@@ -5,7 +5,7 @@ import { Plus, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { MonthSwitcher } from '@/components/financeiro/month-switcher'
-import { PaymentRow } from '@/components/financeiro/payment-row'
+import { PaymentsFilter } from '@/components/financeiro/payments-filter'
 import { FinancialCloseCard } from '@/components/financeiro/financial-close-card'
 import { getPaymentsByMonth } from '@/app/actions/payments'
 import { getFinancialClose } from '@/app/actions/financial-close'
@@ -59,13 +59,7 @@ export default async function FinanceiroPage({
         totalReceived={totalReceived}
       />
 
-      <div className="space-y-2">
-        {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum pagamento neste mês.</p>
-        ) : (
-          payments.map((p) => <PaymentRow key={p.id} payment={p} />)
-        )}
-      </div>
+      <PaymentsFilter payments={payments} />
     </div>
   )
 }

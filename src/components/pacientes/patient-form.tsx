@@ -79,13 +79,27 @@ export function PatientForm({ patient }: { patient?: Patient }) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" name="phone" defaultValue={patient?.phone} disabled={loading} />
+          <Input id="phone" name="phone" type="tel" inputMode="tel" defaultValue={patient?.phone} placeholder="(11) 9xxxx-xxxx" disabled={loading} />
         </div>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="birth_date">Data de nascimento</Label>
-        <Input id="birth_date" name="birth_date" type="date" defaultValue={patient?.birth_date} disabled={loading} />
+        <div className="flex items-center gap-3">
+          <Input id="birth_date" name="birth_date" type="date" defaultValue={patient?.birth_date} disabled={loading}
+            onChange={(e) => {
+              const el = e.currentTarget.parentElement?.querySelector('.age-display') as HTMLElement | null
+              if (!el) return
+              const dob = new Date(e.target.value)
+              if (isNaN(dob.getTime())) { el.textContent = ''; return }
+              const age = new Date().getFullYear() - dob.getFullYear()
+              el.textContent = `${age} anos`
+            }}
+          />
+          <span className="age-display text-sm text-muted-foreground shrink-0">
+            {patient?.birth_date ? `${new Date().getFullYear() - new Date(patient.birth_date).getFullYear()} anos` : ''}
+          </span>
+        </div>
       </div>
 
       <div className="relative space-y-1.5">

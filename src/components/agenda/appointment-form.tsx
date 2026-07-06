@@ -117,7 +117,7 @@ export function AppointmentForm({
                 type="button"
                 onClick={() => setTime(t)}
                 disabled={loading}
-                className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
+                className={`rounded-full px-2.5 py-1.5 min-h-[36px] text-xs border transition-colors ${
                   time === t
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-input hover:bg-accent'
