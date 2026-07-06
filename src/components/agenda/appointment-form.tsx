@@ -25,10 +25,12 @@ export function AppointmentForm({
   patients,
   appointment,
   defaultDate,
+  defaultPatientId,
 }: {
   patients: Patient[]
   appointment?: Appointment
   defaultDate?: string
+  defaultPatientId?: string
 }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -88,7 +90,7 @@ export function AppointmentForm({
         <Label htmlFor="patient_id">Paciente *</Label>
         <PatientCombobox
           patients={patients}
-          defaultValue={appointment?.patient_id}
+          defaultValue={appointment?.patient_id ?? defaultPatientId}
           name="patient_id"
           required
           disabled={loading}
